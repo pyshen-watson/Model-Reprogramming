@@ -1,20 +1,23 @@
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from .backbone import Loadable
 
 
 class SourceModule(pl.LightningModule):
 
-    def __init__(self, source_model, lr=1e-3):
+    def __init__(self, source_model, lr=1e-3, weight_decay=0.0):
         super(SourceModule, self).__init__()
-        self.source_model = source_model
+        self.source_model: Loadable = source_model
         self.lr = lr
+        self.weight_decay = weight_decay
+        self.save_hyperparameters("lr", "weight_decay")
 
     def forward(self, x: torch.Tensor):
         return self.source_model(x)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        return torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
 
     def calc_loss(self, img, label, split: str):
 
@@ -38,4 +41,4 @@ class SourceModule(pl.LightningModule):
         return self.calc_loss(batch[0], batch[1], "test")
 
     def on_save_checkpoint(self, checkpoint):
-        torch.save(self.source_model.state_dict(), "best_source.pt")
+        self.source_model.save(f"best_source_w={self.weight_decay}.pt")

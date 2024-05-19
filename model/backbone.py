@@ -6,6 +6,7 @@ class Loadable(nn.Module):
 
     def __init__(self):
         super(Loadable, self).__init__()
+        self.name = ""
 
     def forward(self, x: torch.Tensor):
         raise NotImplementedError("Forward method is not implemented in LoadableModel")
@@ -14,6 +15,7 @@ class Loadable(nn.Module):
         try:
             self.load_state_dict(torch.load(path))
             print(f"Successfully load weight from {path}")
+            self.name = path.split('/')[-1][:-3]
             return self
 
         except Exception as e:
@@ -32,6 +34,7 @@ class DNN6(Loadable):
     def __init__(self, n_class=10):
         super(DNN6, self).__init__()
 
+        self.n_class = n_class
         self.backbone = nn.Sequential(
             nn.Linear(3072, 2048),
             nn.ReLU(),
@@ -58,6 +61,7 @@ class CNN6(Loadable):
     def __init__(self, n_class=10):
         super(CNN6, self).__init__()
 
+        self.n_class = n_class
         self.backbone = nn.Sequential(
             nn.Conv2d(3, 32, 3, padding=1),
             nn.ReLU(),
