@@ -1,38 +1,46 @@
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, TensorDataset
-
-from enum import Enum
-from dataclasses import dataclass
-from .dataset import load_dataset
+from torchvision import transforms as T
+from torch.utils.data import Dataset, DataLoader
+from .utils import DatasetName, load_dataset
 
 
-class DatasetName(Enum):
-    CIFAR10 = "cifar10"
-    SVHN = "svhn"
-    STL10 = "stl10"
+class ImageDataset(Dataset):
+
+    def __init__(self, name, root_dir="./data/dataset", split="train"):
+        self.image, self.label = load_dataset(name, root_dir, split)
+        self.transform = T.Compose(
+            [
+                T.ToPILImage(),
+                T.ToTensor(),
+                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+
+    def __getitem__(self, idx):
+        return self.transform(self.image[idx]), self.label[idx]
+
+    def __len__(self):
+        return len(self.image)
 
 
-@dataclass
-class DataModule(pl.LightningDataModule):
+class ImageDataModule(pl.LightningDataModule):
 
-    name: DatasetName
-    root_dir: str = "./data/dataset"
-    batch_size: int = 128
+    def __init__(self, name: DatasetName, root_dir="./data/dataset", batch_size=128, num_workers=4):
 
-    def __post_init__(self):
-        self.train_ds, self.test_ds, self.n_class = load_dataset(self.name.value, self.root_dir)
-        self.mean = self.train_ds[0].float().mean((0, 1, 2)) / 255.0
-        self.std = self.train_ds[0].float().std((0, 1, 2)) / 255.0
+        self.train_ds = ImageDataset(name, root_dir, "train")
+        self.test_ds = ImageDataset(name, root_dir, "test")
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.n_class = self.train_ds.label.max().item() + 1
 
     def X_dataloader(self, ds, shuffle=False):
-        ds = TensorDataset(ds[0], ds[1])
-        return DataLoader(ds, batch_size=self.batch_size, shuffle=shuffle)
+        return DataLoader(ds, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=shuffle)
 
     def train_dataloader(self):
         return self.X_dataloader(self.train_ds, shuffle=True)
 
     def val_dataloader(self):
-        return self.X_dataloader(self.test_ds, shuffle=False)
+        return self.X_dataloader(self.test_ds)
 
     def test_dataloader(self):
-        return self.X_dataloader(self.test_ds, shuffle=False)
+        return self.X_dataloader(self.test_ds)
