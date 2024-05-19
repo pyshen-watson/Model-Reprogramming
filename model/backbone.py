@@ -2,7 +2,32 @@ import torch
 import torch.nn as nn
 
 
-class DNN6(nn.Module):
+class Loadable(nn.Module):
+
+    def __init__(self):
+        super(Loadable, self).__init__()
+
+    def forward(self, x: torch.Tensor):
+        raise NotImplementedError("Forward method is not implemented in LoadableModel")
+
+    def load(self, path: str):
+        try:
+            self.load_state_dict(torch.load(path))
+            print(f"Successfully load weight from {path}")
+            return self
+
+        except Exception as e:
+            raise ValueError(f"Fail to load weight from {path}: {e}")
+
+    def save(self, path: str):
+        try:
+            torch.save(self.state_dict(), path)
+            print(f"Successfully save weight to {path}")
+        except Exception as e:
+            raise ValueError(f"Fail to save weight to {path}: {e}")
+
+
+class DNN6(Loadable):
 
     def __init__(self, n_class=10):
         super(DNN6, self).__init__()
@@ -28,7 +53,7 @@ class DNN6(nn.Module):
         return x
 
 
-class CNN6(nn.Module):
+class CNN6(Loadable):
 
     def __init__(self, n_class=10):
         super(CNN6, self).__init__()
