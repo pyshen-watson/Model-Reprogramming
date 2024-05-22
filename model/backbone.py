@@ -1,88 +1,109 @@
 import torch
 import torch.nn as nn
+from typing import NoReturn
+from colorama import Fore, Style
 
 
-class Loadable(nn.Module):
+class Base(nn.Module):
 
     def __init__(self):
-        super(Loadable, self).__init__()
+        super(Base, self).__init__()
         self.name = ""
 
-    def forward(self, x: torch.Tensor):
-        raise NotImplementedError("Forward method is not implemented in LoadableModel")
+    def forward(self, x: torch.Tensor) -> NoReturn:
+        raise NotImplementedError("Forward method is not implemented in Base model")
+
+    def set_name(self, name: str) -> nn.Module:
+        self.name = name
+        return self
+
+    def log_g(self, message):
+        print(Fore.GREEN + message + Style.RESET_ALL)
+
+    def log_r(self, message):
+        print(Fore.RED + message + Style.RESET_ALL)
 
     def load(self, path: str):
         try:
             self.load_state_dict(torch.load(path))
-            print(f"Successfully load weight from {path}")
-            self.name = path.split('/')[-1][:-3]
+            self.log_g(f"- Successfully load weight from {path}")
             return self
 
         except Exception as e:
-            raise ValueError(f"Fail to load weight from {path}: {e}")
+            self.log_r(f"- Fail to load weight from {path}: {e}")
+            raise ValueError()
 
     def save(self, path: str):
         try:
             torch.save(self.state_dict(), path)
-            print(f"Successfully save weight to {path}")
+            self.log_g(f"- Successfully save weight to {path}")
         except Exception as e:
-            raise ValueError(f"Fail to save weight to {path}: {e}")
+            self.log_r(f"- Fail to save weight to {path}: {e}")
+            raise ValueError()
 
 
-class DNN6(Loadable):
+class DNN(Base):
 
-    def __init__(self, n_class=10):
-        super(DNN6, self).__init__()
+    def __init__(self, n_class=10, num_layers=6, width=2048):
+        super(DNN, self).__init__()
 
         self.n_class = n_class
-        self.backbone = nn.Sequential(
-            nn.Linear(3072, 2048),
-            nn.ReLU(),
-            nn.Linear(2048, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, n_class),
-            nn.ReLU(),
-        )
+        self.num_layers = num_layers
+        
+        # Define the backbone
+        width_list = [32 * 32 * 3] + [width] * (num_layers - 1)
+        layers = []
+        for i in range(num_layers-1):
+            layers.append(nn.Linear(width_list[i], width_list[i+1]))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(width, n_class))
+        self.backbone = nn.Sequential(*layers)
+        
+        # Initialize weights
+        self._initialize_weights()
 
     def forward(self, x: torch.Tensor):
         x = x.flatten(1)
         x = self.backbone(x)
         return x
+    
+    def _initialize_weights(self):
+        for m in self.backbone:
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.normal_(m.bias, mean=0, std=0.1 ** 0.5)
 
+class CNN(Base):
 
-class CNN6(Loadable):
-
-    def __init__(self, n_class=10):
-        super(CNN6, self).__init__()
+    def __init__(self, n_class=10, num_layers=6, width=32, sigma_w=2.0, sigma_b=0.1):
+        super(CNN, self).__init__()
 
         self.n_class = n_class
-        self.backbone = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(128, 256, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            nn.Conv2d(256, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 1024, 3, padding=1),
-            nn.ReLU(),
-        )
+        self.num_layers = num_layers
 
-        self.linear = nn.Linear(8 * 8 * 1024, n_class)
+        layers = [nn.Conv2d(3, 32, 3, padding=1), nn.ReLU()]
+
+        for i in range(1, num_layers):
+            layers.append(nn.Conv2d(width, width, 3, padding=1))
+            layers.append(nn.ReLU())
+
+        self.backbone = nn.Sequential(*layers)
+        self.linear = nn.Linear(32 * 32 * width, n_class)
 
     def forward(self, x: torch.Tensor):
         x = self.backbone(x)
         x = x.flatten(1)
         x = self.linear(x)
         return x
+    
+    def _initialize_weights(self):
+        for m in self.backbone:
+            if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+                nn.init.normal_(m.weight, mean=0, std=(self.sigma_w / m.weight.size(1)**0.5) ** 0.5)
+                if m.bias is not None:
+                    nn.init.normal_(m.bias, mean=0, std=self.sigma_b ** 0.5)
+
+
+# Example usage
+model = CNN(n_class=10, num_layers=6)

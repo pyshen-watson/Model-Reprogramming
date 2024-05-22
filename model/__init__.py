@@ -1,3 +1,3 @@
-from .backbone import DNN6, CNN6
+from .backbone import Base, DNN, CNN
 from .source_model import SourceModule
 from .reprogramming import ReprogrammingModule

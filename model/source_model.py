@@ -1,14 +1,15 @@
 import torch
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from .backbone import Loadable
+from .backbone import Base
+from pathlib import Path
 
 
 class SourceModule(pl.LightningModule):
 
     def __init__(self, source_model, lr=1e-3, weight_decay=0.0):
         super(SourceModule, self).__init__()
-        self.source_model: Loadable = source_model
+        self.source_model: Base = source_model
         self.lr = lr
         self.weight_decay = weight_decay
         self.save_hyperparameters("lr", "weight_decay")
@@ -41,4 +42,7 @@ class SourceModule(pl.LightningModule):
         return self.calc_loss(batch[0], batch[1], "test")
 
     def on_save_checkpoint(self, checkpoint):
-        self.source_model.save(f"best_source_w={self.weight_decay}.pt")
+        ckpt_key = [k for k in checkpoint['callbacks'].keys() if 'ModelCheckpoint' in k ][0]
+        ckpt_dir = checkpoint['callbacks'][ckpt_key]["dirpath"]
+        best_path = Path(ckpt_dir).parent / f"src_{self.source_model.name}.pt"
+        self.source_model.save(best_path)

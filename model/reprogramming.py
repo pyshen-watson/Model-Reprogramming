@@ -2,49 +2,58 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from .backbone import Loadable
+from .backbone import Base
+from pathlib import Path
 
 
-class ReprogrammingLayer(Loadable):
-    def __init__(self, rescale_size=24, output_size=32):
+class ReprogrammingLayer(Base):
+    def __init__(self, inner_size=24, outter_size=32, visual_prompt=True, fc_layer=True):
         super(ReprogrammingLayer, self).__init__()
-        self.rescale_size = rescale_size
-        self.output_size = output_size
+        self.inner_size = inner_size
+        self.outter_size = outter_size
+        self.VP = visual_prompt
+        self.FC = fc_layer
+        
+        if visual_prompt:
+            # Calculate the padding dimensions
+            pad_h = (outter_size - inner_size) // 2
+            pad_w = (outter_size - inner_size) // 2
 
-        # Calculate the padding dimensions
-        pad_h = (output_size - rescale_size) // 2
-        pad_w = (output_size - rescale_size) // 2
+            # Initialize the padding with trainable parameters
+            self.pad_t = nn.Parameter(torch.randn(3, pad_h, outter_size))
+            self.pad_b = nn.Parameter(torch.randn(3, pad_h, outter_size))
+            self.pad_l = nn.Parameter(torch.randn(3, inner_size, pad_w))
+            self.pad_r = nn.Parameter(torch.randn(3, inner_size, pad_w))
 
-        # Initialize the padding with trainable parameters
-        self.pad_t = nn.Parameter(torch.randn(3, pad_h, output_size))
-        self.pad_b = nn.Parameter(torch.randn(3, pad_h, output_size))
-        self.pad_l = nn.Parameter(torch.randn(3, rescale_size, pad_w))
-        self.pad_r = nn.Parameter(torch.randn(3, rescale_size, pad_w))
-
-        # One layer of DNN
-        # self.fc = nn.Linear(3 * output_size * output_size, 3 * output_size * output_size)
+        if fc_layer:
+            # One layer of DNN
+            self.fc = nn.Linear(3 * outter_size * outter_size, 3 * outter_size * outter_size)
 
     def forward(self, x: torch.Tensor):
-
-        # Resize the input image
-        x = F.interpolate(x, size=self.rescale_size, mode="bilinear", align_corners=False)
-
-        # Add the padding
-        batch_size = x.size(0)
-        pad_t = self.pad_t.repeat(batch_size, 1, 1, 1)
-        pad_b = self.pad_b.repeat(batch_size, 1, 1, 1)
-        pad_l = self.pad_l.repeat(batch_size, 1, 1, 1)
-        pad_r = self.pad_r.repeat(batch_size, 1, 1, 1)
-        x = torch.cat([pad_l, x, pad_r], dim=3)
-        x = torch.cat([pad_t, x, pad_b], dim=2)
-
-        # Pass a DNN layer
-        # x = x.flatten(1)
-        # x = self.fc(x)
-        # x = x.reshape(-1, 3, self.output_size, self.output_size)
+        
+        if self.VP:
+            # Resize the input image
+            x = F.interpolate(x, size=self.inner_size, mode="bilinear", align_corners=False)
+            # Add the padding
+            batch_size = x.size(0)
+            pad_t = self.pad_t.repeat(batch_size, 1, 1, 1)
+            pad_b = self.pad_b.repeat(batch_size, 1, 1, 1)
+            pad_l = self.pad_l.repeat(batch_size, 1, 1, 1)
+            pad_r = self.pad_r.repeat(batch_size, 1, 1, 1)
+            x = torch.cat([pad_l, x, pad_r], dim=3)
+            x = torch.cat([pad_t, x, pad_b], dim=2)
+        
+        if self.FC:
+            # Resize the image
+            x = F.interpolate(x, size=self.outter_size, mode="bilinear", align_corners=False)
+            # Pass a DNN layer
+            x = x.flatten(1)
+            x = self.fc(x)
+            x = x.reshape(-1, 3, self.outter_size, self.outter_size)
+            
         return x
 
-class LabelMappingLayer(Loadable):
+class LabelMappingLayer(Base):
     
     def __init__(self, n_source_class=10, n_target_class=10):
         super(LabelMappingLayer, self).__init__()
@@ -53,13 +62,12 @@ class LabelMappingLayer(Loadable):
     def forward(self, x: torch.Tensor):
         return self.fc(x)
     
-class ReprogrammingModule(pl.LightningModule, Loadable):
+class ReprogrammingModule(pl.LightningModule, Base):
     
-    def __init__(self, source_model, rescale_size=24, source_size=32, n_target_class=10, lr=1e-3):
+    def __init__(self, source_model, inner_size=24, outter_size=32, lr=1e-3, visual_prompt=True, fc_layer=True):
         super(ReprogrammingModule, self).__init__()
-        self.rpm_layer = ReprogrammingLayer(rescale_size, source_size)
+        self.rpm_layer = ReprogrammingLayer(inner_size, outter_size, visual_prompt, fc_layer)
         self.source_model: nn.Module = source_model
-        self.lm_layer = LabelMappingLayer(source_model.n_class, n_target_class)
         self.lr = lr
         
         # Freeze the source model
@@ -69,7 +77,6 @@ class ReprogrammingModule(pl.LightningModule, Loadable):
     def forward(self, x: torch.Tensor):
         x = self.rpm_layer(x)
         x = self.source_model(x)
-        x = self.lm_layer(x)
         return x
 
     def configure_optimizers(self):
@@ -97,10 +104,7 @@ class ReprogrammingModule(pl.LightningModule, Loadable):
         return self.calc_loss(batch[0], batch[1], "test")
 
     def on_save_checkpoint(self, checkpoint):
-        self.rpm_layer.save(f"best_rpm_layer_{self.source_model.name}.pt")
-        self.lm_layer.save(f"best_lm_layer_{self.source_model.name}.pt")
-        
-    def load(self, rpm_path: str, lm_path: str):
-        self.rpm_layer.load(rpm_path)
-        self.lm_layer.load(lm_path)
-        return self
+        ckpt_key = [k for k in checkpoint['callbacks'].keys() if 'ModelCheckpoint' in k ][0]
+        ckpt_dir = checkpoint['callbacks'][ckpt_key]["dirpath"]
+        best_path = Path(ckpt_dir).parent / f"rpm_{self.source_model.name}.pt"
+        self.rpm_layer.save(best_path)
