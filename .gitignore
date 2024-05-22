@@ -3,3 +3,4 @@ data/dataset
 lightning_logs/
 *.pyc
 *.pt
+*.ipynb
