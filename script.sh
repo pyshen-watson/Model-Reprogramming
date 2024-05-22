@@ -1,43 +1,48 @@
 # !/bin/bash
-python train_source_model.py -n D1-0.0 -l 1 -m DNN -w 0.0 &
-python train_source_model.py -n D2-0.0 -l 2 -m DNN -w 0.0 &
-python train_source_model.py -n D3-0.0 -l 3 -m DNN -w 0.0 &
-python train_source_model.py -n D4-0.0 -l 4 -m DNN -w 0.0 &
-python train_source_model.py -n D5-0.0 -l 5 -m DNN -w 0.0 &
-python train_source_model.py -n D6-0.0 -l 6 -m DNN -w 0.0 &
-python train_source_model.py -n D7-0.0 -l 7 -m DNN -w 0.0 &
-python train_source_model.py -n D8-0.0 -l 8 -m DNN -w 0.0 &
-python train_source_model.py -n D9-0.0 -l 9 -m DNN -w 0.0 &
 
-# python train_rpm_model.py -n D1-VP -l 1 -m DNN -p weights/by_depth/src_D1-0.0.pt -v &
-# python train_rpm_model.py -n D2-VP -l 2 -m DNN -p weights/by_depth/src_D2-0.0.pt -v &
-# python train_rpm_model.py -n D3-VP -l 3 -m DNN -p weights/by_depth/src_D3-0.0.pt -v &
-# python train_rpm_model.py -n D4-VP -l 4 -m DNN -p weights/by_depth/src_D4-0.0.pt -v &
-# python train_rpm_model.py -n D5-VP -l 5 -m DNN -p weights/by_depth/src_D5-0.0.pt -v &
-# python train_rpm_model.py -n D6-VP -l 6 -m DNN -p weights/by_depth/src_D6-0.0.pt -v &
-# python train_rpm_model.py -n D7-VP -l 7 -m DNN -p weights/by_depth/src_D7-0.0.pt -v &
-# python train_rpm_model.py -n D8-VP -l 8 -m DNN -p weights/by_depth/src_D8-0.0.pt -v &
-# python train_rpm_model.py -n D9-VP -l 9 -m DNN -p weights/by_depth/src_D9-0.0.pt -v &
+# Train source models
+# python train_source_model.py -n C1-SRC -l 1 -m CNN -w 0.0 &
+# python train_source_model.py -n C2-SRC -l 2 -m CNN -w 0.0 &
+# python train_source_model.py -n C3-SRC -l 3 -m CNN -w 0.0 &
+# python train_source_model.py -n C4-SRC -l 4 -m CNN -w 0.0 &
+# python train_source_model.py -n C5-SRC -l 5 -m CNN -w 0.0 &
+# python train_source_model.py -n C6-SRC -l 6 -m CNN -w 0.0 &
+# python train_source_model.py -n C7-SRC -l 7 -m CNN -w 0.0 &
+# python train_source_model.py -n C8-SRC -l 8 -m CNN -w 0.0 &
+# python train_source_model.py -n C9-SRC -l 9 -m CNN -w 0.0 &
 
-# python train_rpm_model.py -n D1-FC -l 1 -m DNN -p weights/by_depth/src_D1-0.0.pt -f &
-# python train_rpm_model.py -n D2-FC -l 2 -m DNN -p weights/by_depth/src_D2-0.0.pt -f &
-# python train_rpm_model.py -n D3-FC -l 3 -m DNN -p weights/by_depth/src_D3-0.0.pt -f &
-# python train_rpm_model.py -n D4-FC -l 4 -m DNN -p weights/by_depth/src_D4-0.0.pt -f &
-# python train_rpm_model.py -n D5-FC -l 5 -m DNN -p weights/by_depth/src_D5-0.0.pt -f &
-# python train_rpm_model.py -n D6-FC -l 6 -m DNN -p weights/by_depth/src_D6-0.0.pt -f &
-# python train_rpm_model.py -n D7-FC -l 7 -m DNN -p weights/by_depth/src_D7-0.0.pt -f &
-# python train_rpm_model.py -n D8-FC -l 8 -m DNN -p weights/by_depth/src_D8-0.0.pt -f &
-# python train_rpm_model.py -n D9-FC -l 9 -m DNN -p weights/by_depth/src_D9-0.0.pt -f &
+# Baseline
+# python train_rpm_model.py -n C1-1-STL -l 1 -m CNN -p weights/C1-1-SRC.pt &
+# python train_rpm_model.py -n C2-1-STL -l 2 -m CNN -p weights/C2-1-SRC.pt &
+# python train_rpm_model.py -n C4-8-STL -l 4 -m CNN -p weights/C4-8-SRC.pt &
 
-# python train_rpm_model.py -n D1-VPFC -l 1 -m DNN -p weights/by_depth/src_D1-0.0.pt -f -v &
-# python train_rpm_model.py -n D2-VPFC -l 2 -m DNN -p weights/by_depth/src_D2-0.0.pt -f -v &
-# python train_rpm_model.py -n D3-VPFC -l 3 -m DNN -p weights/by_depth/src_D3-0.0.pt -f -v &
-# python train_rpm_model.py -n D4-VPFC -l 4 -m DNN -p weights/by_depth/src_D4-0.0.pt -f -v &
-# python train_rpm_model.py -n D5-VPFC -l 5 -m DNN -p weights/by_depth/src_D5-0.0.pt -f -v &
-# python train_rpm_model.py -n D6-VPFC -l 6 -m DNN -p weights/by_depth/src_D6-0.0.pt -f -v &
-# python train_rpm_model.py -n D7-VPFC -l 7 -m DNN -p weights/by_depth/src_D7-0.0.pt -f -v &
-# python train_rpm_model.py -n D8-VPFC -l 8 -m DNN -p weights/by_depth/src_D8-0.0.pt -f -v &
-# python train_rpm_model.py -n D9-VPFC -l 9 -m DNN -p weights/by_depth/src_D9-0.0.pt -f -v &
+# Visual Prompt
+python train_rpm_model.py -n C1-1-VP-STL -l 1 -m CNN -p weights/C1-1-SRC.pt -v &
+python train_rpm_model.py -n C2-1-VP-STL -l 2 -m CNN -p weights/C2-1-SRC.pt -v &
+python train_rpm_model.py -n C4-8-VP-STL -l 4 -m CNN -p weights/C4-8-SRC.pt -v &
+
+# FC Layer
+python train_rpm_model.py -n C1-1-FC-STL -l 1 -m CNN -p weights/C1-1-SRC.pt -f &
+python train_rpm_model.py -n C2-1-FC-STL -l 2 -m CNN -p weights/C2-1-SRC.pt -f &
+python train_rpm_model.py -n C4-8-FC-STL -l 4 -m CNN -p weights/C4-8-SRC.pt -f &
+
+# VP+FC
+python train_rpm_model.py -n C1-1-MIX-STL -l 1 -m CNN -p weights/C1-1-SRC.pt -f -v &
+python train_rpm_model.py -n C2-1-MIX-STL -l 2 -m CNN -p weights/C2-1-SRC.pt -f -v &
+python train_rpm_model.py -n C4-8-MIX-STL -l 4 -m CNN -p weights/C4-8-SRC.pt -f -v &
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # python train_source_model.py -n D-0.0 -m DNN -w 0.0 &

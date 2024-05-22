@@ -31,6 +31,7 @@ class ReprogrammingLayer(Base):
 
     def forward(self, x: torch.Tensor):
         
+        
         if self.VP:
             # Resize the input image
             x = F.interpolate(x, size=self.inner_size, mode="bilinear", align_corners=False)
@@ -50,7 +51,9 @@ class ReprogrammingLayer(Base):
             x = x.flatten(1)
             x = self.fc(x)
             x = x.reshape(-1, 3, self.outter_size, self.outter_size)
-            
+        
+        # x = F.interpolate(x, size=self.outter_size, mode="bilinear", align_corners=False)
+        
         return x
 
 class LabelMappingLayer(Base):

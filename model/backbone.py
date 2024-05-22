@@ -49,16 +49,16 @@ class DNN(Base):
 
         self.n_class = n_class
         self.num_layers = num_layers
-        
+
         # Define the backbone
-        width_list = [32 * 32 * 3] + [width] * (num_layers - 1)
+        width_list = [32 * 32 * 3] + [width] * (num_layers-1)
         layers = []
         for i in range(num_layers-1):
-            layers.append(nn.Linear(width_list[i], width_list[i+1]))
+            layers.append(nn.Linear(width_list[i], width_list[i + 1]))
             layers.append(nn.ReLU())
-        layers.append(nn.Linear(width, n_class))
+        layers.append(nn.Linear(width_list[-1], n_class))
         self.backbone = nn.Sequential(*layers)
-        
+
         # Initialize weights
         self._initialize_weights()
 
@@ -66,13 +66,15 @@ class DNN(Base):
         x = x.flatten(1)
         x = self.backbone(x)
         return x
-    
+
     def _initialize_weights(self):
         for m in self.backbone:
             if isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                std = (2.0 / m.weight.size(1)) ** 0.5
+                nn.init.normal_(m.weight, mean=0, std=std)
                 if m.bias is not None:
                     nn.init.normal_(m.bias, mean=0, std=0.1 ** 0.5)
+
 
 class CNN(Base):
 
@@ -82,7 +84,7 @@ class CNN(Base):
         self.n_class = n_class
         self.num_layers = num_layers
 
-        layers = [nn.Conv2d(3, 32, 3, padding=1), nn.ReLU()]
+        layers = [nn.Conv2d(3, width, 3, padding=1), nn.ReLU()]
 
         for i in range(1, num_layers):
             layers.append(nn.Conv2d(width, width, 3, padding=1))
@@ -96,14 +98,14 @@ class CNN(Base):
         x = x.flatten(1)
         x = self.linear(x)
         return x
-    
+
     def _initialize_weights(self):
         for m in self.backbone:
             if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-                nn.init.normal_(m.weight, mean=0, std=(self.sigma_w / m.weight.size(1)**0.5) ** 0.5)
+                nn.init.normal_(
+                    m.weight,
+                    mean=0,
+                    std=(self.sigma_w / m.weight.size(1)) ** 0.5,
+                )
                 if m.bias is not None:
-                    nn.init.normal_(m.bias, mean=0, std=self.sigma_b ** 0.5)
-
-
-# Example usage
-model = CNN(n_class=10, num_layers=6)
+                    nn.init.normal_(m.bias, mean=0, std=self.sigma_b**0.5)
