@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from data import DatasetName, ImageDataModule
+from dataset import DatasetName, ImageDataModule
 from model import DNN, CNN, ReprogrammingModule
 
 import pytorch_lightning as pl

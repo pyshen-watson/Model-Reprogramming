@@ -1,5 +1,5 @@
 .record
-data/dataset
+dataset/data
 lightning_logs/
 *.pyc
 *.pt

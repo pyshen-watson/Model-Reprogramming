@@ -77,21 +77,25 @@ class DNN(Base):
 
 
 class CNN(Base):
+    
 
-    def __init__(self, n_class=10, num_layers=6, width=32, sigma_w=2.0, sigma_b=0.1):
+    def __init__(self, n_class=10, num_layers=6, input_size=32, conv_width=64, sigma_w=2.0, sigma_b=0.1):
         super(CNN, self).__init__()
 
         self.n_class = n_class
         self.num_layers = num_layers
+        self.sigma_w = sigma_w
+        self.sigma_b = sigma_b
 
-        layers = [nn.Conv2d(3, width, 3, padding=1), nn.ReLU()]
+        layers = [nn.Conv2d(3, conv_width, 3, padding=1), nn.ReLU()]
 
         for i in range(1, num_layers):
-            layers.append(nn.Conv2d(width, width, 3, padding=1))
+            layers.append(nn.Conv2d(conv_width, conv_width, 3, padding=1))
             layers.append(nn.ReLU())
 
         self.backbone = nn.Sequential(*layers)
-        self.linear = nn.Linear(32 * 32 * width, n_class)
+        self.linear = nn.Linear(input_size * input_size * conv_width, n_class)
+        self._initialize_weights()
 
     def forward(self, x: torch.Tensor):
         x = self.backbone(x)
@@ -101,11 +105,13 @@ class CNN(Base):
 
     def _initialize_weights(self):
         for m in self.backbone:
-            if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-                nn.init.normal_(
-                    m.weight,
-                    mean=0,
-                    std=(self.sigma_w / m.weight.size(1)) ** 0.5,
-                )
+            if isinstance(m, nn.Conv2d):
+                mean = 0.0
+                std = (self.sigma_w / m.weight.size(1)) ** 0.5
+                nn.init.normal_(m.weight, mean, std)
                 if m.bias is not None:
-                    nn.init.normal_(m.bias, mean=0, std=self.sigma_b**0.5)
+                    nn.init.normal_(m.bias, mean, self.sigma_b**0.5)
+                    
+        std = (self.sigma_w / self.linear.weight.size(1)) ** 0.5
+        nn.init.normal_(self.linear.weight, mean, std)
+        nn.init.normal_(self.linear.bias, mean, self.sigma_b**0.5)
