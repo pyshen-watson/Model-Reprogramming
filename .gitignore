@@ -4,3 +4,5 @@ lightning_logs/
 *.pyc
 *.pt
 *.ipynb
+*.npy
+script.sh
