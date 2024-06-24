@@ -7,33 +7,38 @@ from pathlib import Path
 
 
 class ReprogrammingLayer(Base):
-    def __init__(self, inner_size=24, outter_size=32, visual_prompt=True, fc_layer=True):
+    def __init__(self, inner_size=24, src_size=32, visual_prompt=True, fc_layer=True):
+        
         super(ReprogrammingLayer, self).__init__()
         self.inner_size = inner_size
-        self.outter_size = outter_size
+        self.src_size = src_size
         self.VP = visual_prompt
         self.FC = fc_layer
         
         if visual_prompt:
             # Calculate the padding dimensions
-            pad_h = (outter_size - inner_size) // 2
-            pad_w = (outter_size - inner_size) // 2
+            pad_h = (src_size - inner_size) // 2
+            pad_w = (src_size - inner_size) // 2
 
             # Initialize the padding with trainable parameters
-            self.pad_t = nn.Parameter(torch.randn(3, pad_h, outter_size))
-            self.pad_b = nn.Parameter(torch.randn(3, pad_h, outter_size))
+            self.pad_t = nn.Parameter(torch.randn(3, pad_h, src_size))
+            self.pad_b = nn.Parameter(torch.randn(3, pad_h, src_size))
             self.pad_l = nn.Parameter(torch.randn(3, inner_size, pad_w))
             self.pad_r = nn.Parameter(torch.randn(3, inner_size, pad_w))
 
         if fc_layer:
             # One layer of DNN
-            self.fc = nn.Linear(3 * outter_size * outter_size, 3 * outter_size * outter_size)
+            self.fc = nn.Linear(3 * src_size * src_size, 3 * src_size * src_size)
 
     def forward(self, x: torch.Tensor):
         
+        if not self.VP and not self.FC:
+            x = F.interpolate(x, size=self.src_size, mode="bilinear", align_corners=False)
+            return x
+        
         
         if self.VP:
-            # Resize the input image
+            # Resize the input image to inner size
             x = F.interpolate(x, size=self.inner_size, mode="bilinear", align_corners=False)
             # Add the padding
             batch_size = x.size(0)
@@ -46,30 +51,19 @@ class ReprogrammingLayer(Base):
         
         if self.FC:
             # Resize the image
-            x = F.interpolate(x, size=self.outter_size, mode="bilinear", align_corners=False)
+            x = F.interpolate(x, size=self.src_size, mode="bilinear", align_corners=False)
             # Pass a DNN layer
             x = x.flatten(1)
             x = self.fc(x)
-            x = x.reshape(-1, 3, self.outter_size, self.outter_size)
-        
-        # x = F.interpolate(x, size=self.outter_size, mode="bilinear", align_corners=False)
+            x = x.reshape(-1, 3, self.src_size, self.src_size)
         
         return x
-
-class LabelMappingLayer(Base):
-    
-    def __init__(self, n_source_class=10, n_target_class=10):
-        super(LabelMappingLayer, self).__init__()
-        self.fc = nn.Linear(n_source_class, n_target_class)
-        
-    def forward(self, x: torch.Tensor):
-        return self.fc(x)
     
 class ReprogrammingModule(pl.LightningModule, Base):
     
-    def __init__(self, source_model, inner_size=24, outter_size=32, lr=1e-3, visual_prompt=True, fc_layer=True):
+    def __init__(self, source_model, inner_size=24, src_size=32, lr=1e-3, visual_prompt=True, fc_layer=True):
         super(ReprogrammingModule, self).__init__()
-        self.rpm_layer = ReprogrammingLayer(inner_size, outter_size, visual_prompt, fc_layer)
+        self.rpm_layer = ReprogrammingLayer(inner_size, src_size, visual_prompt, fc_layer)
         self.source_model: nn.Module = source_model
         self.lr = lr
         

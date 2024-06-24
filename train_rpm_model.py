@@ -22,6 +22,8 @@ def parse_args():
     parser.add_argument( "-l", "--num_layers", type=int, default=6, help="Number of layers for DNN model (default: 6)", )
     parser.add_argument( "-v", "--visual_prompt", action="store_true", help="Use visual prompt (default: False)", )
     parser.add_argument( "-f", "--fc_layer", action="store_true", help="Use fully connected layer (default: False)", )
+    parser.add_argument( "-i", "--inner_size", type=int, default=56, help="The inner size of the visual prompt (default: 56)", )
+    parser.add_argument( "-s", "--src_size", type=int, default=224, help="The size of source model (default: 224)", )
     return parser.parse_args()
 
 def get_data_module(args):
@@ -39,6 +41,8 @@ def get_backbone(args, n_class=10):
 def get_module(args, backbone):
     return ReprogrammingModule(
         source_model=backbone, 
+        inner_size=args.inner_size, 
+        src_size=args.src_size,
         lr=args.lr,
         visual_prompt=args.visual_prompt,
         fc_layer=args.fc_layer,
@@ -63,7 +67,7 @@ if __name__ == "__main__":
 
     args = parse_args()
     data_module = get_data_module(args)
-    backbone = get_backbone(args, data_module.n_class)
+    backbone = get_backbone(args, 10)
     rpm_module = get_module(args, backbone)
     trainer = get_trainer(args)
 

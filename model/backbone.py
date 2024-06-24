@@ -18,10 +18,10 @@ class Base(nn.Module):
         return self
 
     def log_g(self, message):
-        print(Fore.GREEN + message + Style.RESET_ALL)
+        print(Fore.GREEN + '✓ ' + message + Style.RESET_ALL)
 
     def log_r(self, message):
-        print(Fore.RED + message + Style.RESET_ALL)
+        print(Fore.RED + '✗ ' + message + Style.RESET_ALL)
 
     def load(self, path: str):
         try:
@@ -37,6 +37,7 @@ class Base(nn.Module):
         try:
             torch.save(self.state_dict(), path)
             self.log_g(f"- Successfully save weight to {path}")
+            
         except Exception as e:
             self.log_r(f"- Fail to save weight to {path}: {e}")
             raise ValueError()
