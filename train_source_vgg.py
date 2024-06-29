@@ -1,18 +1,18 @@
 from argparse import ArgumentParser
 from dataset import DatasetName, ImageDataModule
-from model import DNN, CNN, SourceModule
+from model import VGG, SourceModule
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
-pl.seed_everything(42, workers=True) # Ming-Yu: 756; default: 69;
+pl.seed_everything(42, workers=True)
 
 
 def get_args():
     parser = ArgumentParser()
     parser.add_argument( "-n", "--exp_name", type=str, default="untitled", help="Name of the experiment (default: 'untitled')", ) 
-    parser.add_argument( "-m", "--model", type=str, help="Type of model to use: 'DNN' or 'CNN' (required)", ) 
+    parser.add_argument( "-m", "--model", type=int, default=16, help="The number of layers 13, 16 or 19 (required)", ) 
     parser.add_argument( "-b", "--batch_size", type=int, default=128, help="Batch size for training (default: 128)", ) 
     parser.add_argument( "-w", "--weight_decay", type=float, default=0.001, help="Weight decay (default: 0.001)", ) 
     parser.add_argument( "-L", "--lr", type=float, default=1e-3, help="Learning rate (default: 1e-3)" ) 
@@ -36,9 +36,14 @@ def get_data_module(args):
 
 
 def get_backbone(args, n_class=10):
-    assert args.model in ["DNN", "CNN"], f"Model {args.model} not found"
-    model_dict = {"DNN": DNN, "CNN": CNN}
-    return model_dict[args.model](n_class, args.num_layers, input_size=args.src_size, conv_width=64).set_name(args.exp_name)
+    if args.model == 13:
+        return VGG(input_size=args.src_size, n_class=n_class, num_blocks=[2, 2, 2, 2, 2]).set_name(args.exp_name)
+    elif args.model == 16:
+        return VGG(input_size=args.src_size, n_class=n_class, num_blocks=[2, 2, 3, 3, 3]).set_name(args.exp_name)
+    elif args.model == 19:
+        return VGG(input_size=args.src_size, n_class=n_class, num_blocks=[2, 2, 4, 4, 4]).set_name(args.exp_name)
+    else:
+        raise ValueError("Invalid model number")
 
 
 def get_module(args, backbone):
@@ -55,9 +60,10 @@ def get_trainer(args):
         fast_dev_run=args.dry_run,
         logger=TensorBoardLogger("lightning_logs", name=args.exp_name), #Ming-Yu: MY_logs; default "lightning_logs"
         check_val_every_n_epoch=2, # Ming-Yu: accelerate
+        log_every_n_steps=20,
         callbacks=[
             ModelCheckpoint(monitor="val_loss", save_top_k=1, mode="min"),
-            # EarlyStopping(monitor="val_loss", patience=70, mode="min"), # Ming-Yu: 70; default pat=3
+            EarlyStopping(monitor="val_loss", patience=70, mode="min"), # Ming-Yu: 70; default pat=3
         ]
     )
 
@@ -67,7 +73,8 @@ if __name__ == "__main__":
     args = get_args()
     data_module = get_data_module(args)
     backbone = get_backbone(args, 10)
-    src_module = get_module(args, backbone)
+    # src_module = get_module(args, backbone)
+    src_module = SourceModule.load_from_checkpoint('lightning_logs/IN10-VGG16-SRC/version_1/checkpoints/epoch=15-step=784.ckpt', source_model=backbone, lr=args.lr, weight_decay=args.weight_decay)
     trainer = get_trainer(args)
     
     trainer.fit(

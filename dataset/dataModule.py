@@ -12,8 +12,7 @@ class DatasetName(Enum):
     CIFAR10 = "cifar10"
     SVHN = "svhn"
     STL10 = "stl10"
-    IMAGENET_F10 = "imagenet-f10"
-    # IMAGENET_R10 = "imagenet-r10"
+    IMAGENET10 = "imagenet10"
 
     @staticmethod
     def member():
@@ -50,7 +49,7 @@ class ImageDataModule(pl.LightningDataModule):
             self.train_ds = STL10(root_dir, split="train", transform=transform, download=True)
             self.test_ds = STL10(root_dir, split="test", transform=transform, download=True)
 
-        elif name == DatasetName.IMAGENET_F10:
+        elif name == DatasetName.IMAGENET10:
             self.train_ds = ImageFolder(Path(root_dir) / "train", transform=transform)
             self.test_ds = ImageFolder(Path(root_dir) / "test", transform=transform)
 

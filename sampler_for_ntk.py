@@ -8,9 +8,9 @@ from torchvision import transforms as T
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument( "-r", "--root_dir", type=str, default="/home/pyshen/DataCenter/ImageNet/IN_first10/train", help="The path to the root directory of the dataset", )
+    parser.add_argument( "-r", "--root_dir", type=str, default="/home/pyshen/DataCenter/ImageNet10/train", help="The path to the root directory of the dataset", )
     parser.add_argument( "-s", "--size", type=int, default=224, help="The size of the image" )
-    parser.add_argument( "-n", "--num_sample", type=int, default=500, help="The number of samples to read from the dataset", )
+    parser.add_argument( "-n", "--num_sample", type=int, default=100, help="The number of samples to read from the dataset", )
     return parser.parse_args()
 
 
@@ -62,11 +62,11 @@ def main():
     image_array = np.stack(image_list, axis=0)
     label_array = np.array(label_list)
 
-    np.save("IN_F10_image.npy", image_array)
-    print(f"Save: IN_F10_image.npy\tShape: {image_array.shape}")
+    np.save("IN10_image.npy", image_array)
+    print(f"Save: IN10_image.npy\tShape: {image_array.shape}")
 
-    np.save("IN_F10_label.npy", label_array)
-    print(f"Save: IN_F10_label.npy\tShape: {label_array.shape}")
+    np.save("IN10_label.npy", label_array)
+    print(f"Save: IN10_label.npy\tShape: {label_array.shape}")
 
 
 if __name__ == "__main__":
