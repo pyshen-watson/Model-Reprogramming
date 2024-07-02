@@ -1,1 +1,1 @@
-from .dataModule import DatasetName, ImageDataModule
+from .dataModule import DsName, ImageDataModule

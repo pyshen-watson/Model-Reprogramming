@@ -1,60 +1,74 @@
 import pytorch_lightning as pl
 from enum import Enum
 from pathlib import Path
-from colorama import Fore, Style
-from torchvision.datasets import CIFAR10, SVHN, STL10, ImageFolder
-from torchvision import transforms as T
-from torch.utils.data import DataLoader
 from functools import partial
+from colorama import Fore, Style
+from torch.utils.data import DataLoader
+from torchvision import transforms as T
+from torchvision.datasets import CIFAR10, SVHN, STL10, ImageFolder
+from dataclasses import dataclass
 
 
-class DatasetName(Enum):
+class DsName(Enum):
     CIFAR10 = "cifar10"
     SVHN = "svhn"
     STL10 = "stl10"
     IMAGENET10 = "imagenet10"
+    
 
-    @staticmethod
-    def member():
-        return [ds.name for ds in DatasetName]
-
-
-def get_transform(size=32):
-    return T.Compose(
-        [
-            T.ToTensor(),
-            T.Resize((size, size), antialias=True),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
-
-
+@dataclass
 class ImageDataModule(pl.LightningDataModule):
 
-    def __init__( self, name: DatasetName, root_dir="./dataset/data", size=32, batch_size=128, num_workers=12, ):
-        super().__init__()
+    name: DsName
+    root_dir: str = "./dataset/data"
+    size: int = 32
+    batch_size: int = 128
+    num_workers: int = 12
 
-        transform = get_transform(size)
-        self.create_loader = partial( DataLoader, num_workers=num_workers, batch_size=batch_size )
+    def __post_init__(self):
+        
+        self.train_T = T.Compose([
+                T.ToTensor(),
+                T.RandomHorizontalFlip(),
+                T.RandomRotation(15),
+                T.Resize((self.size, self.size), antialias=True),
+                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+        
+        self.test_T =  T.Compose([
+                T.ToTensor(),
+                T.Resize((self.size, self.size), antialias=True),
+                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ])
+        
+        self.prepare_data()
+        self.create_loader = partial(DataLoader, num_workers=self.num_workers, batch_size=self.batch_size)
 
-        if name == DatasetName.CIFAR10:
-            self.train_ds = CIFAR10(root_dir, train=True, transform=transform, download=True)
-            self.test_ds = CIFAR10(root_dir, train=False, transform=transform, download=True)
+    def prepare_data(self):
 
-        elif name == DatasetName.SVHN:
-            self.train_ds = SVHN(root_dir, split="train", transform=transform, download=True)
-            self.test_ds = SVHN(root_dir, split="test", transform=transform, download=True)
+        if self.name == DsName.CIFAR10:
+            cifar10 = partial(CIFAR10, root=self.root_dir, download=True)
+            self.train_ds = cifar10(train=True, transform=self.train_T)
+            self.test_ds  = cifar10(train=False, transform=self.test_T)
 
-        elif name == DatasetName.STL10:
-            self.train_ds = STL10(root_dir, split="train", transform=transform, download=True)
-            self.test_ds = STL10(root_dir, split="test", transform=transform, download=True)
+        elif self.name == DsName.SVHN:
+            svhn = partial(SVHN, root=self.root_dir, download=True)
+            self.train_ds = svhn(split="train", transform=self.train_T)
+            self.test_ds  = svhn(split="test", transform=self.test_T)
 
-        elif name == DatasetName.IMAGENET10:
-            self.train_ds = ImageFolder(Path(root_dir) / "train", transform=transform)
-            self.test_ds = ImageFolder(Path(root_dir) / "test", transform=transform)
+        elif self.name == DsName.STL10:
+            stl10 = partial(STL10, root=self.root_dir, download=True)
+            self.train_ds = stl10(split="train", transform=self.train_T)
+            self.test_ds  = stl10(split="test", transform=self.test_T)
+
+        elif self.name == DsName.IMAGENET10:
+            root_dir = Path(self.root_dir)
+            self.train_ds = ImageFolder(root_dir / "train", transform=self.train_T)
+            self.test_ds = ImageFolder(root_dir / "test", transform=self.test_T)
 
         else:
-            err_msg = f"✗ Invalid name: dataset name must be one of {DatasetName.member()}"
+            member_list = ', '.join([ds.name for ds in DsName])
+            err_msg = f"✗ Invalid name: dataset name must be one of {member_list}."
             raise ValueError(Fore.RED + err_msg + Style.RESET_ALL)
 
     def train_dataloader(self):
