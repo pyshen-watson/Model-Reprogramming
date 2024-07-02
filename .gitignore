@@ -1,4 +1,4 @@
-.record
+.legacy
 dataset/data
 lightning_logs/
 *.pyc
