@@ -14,7 +14,20 @@ class DsName(Enum):
     SVHN = "svhn"
     STL10 = "stl10"
     IMAGENET10 = "imagenet10"
-    
+
+    @staticmethod
+    def member_list():
+        return ', '.join([ds.name for ds in DsName])
+ 
+
+    @staticmethod
+    def value_to_member(value:str):
+        try:
+            return DsName._value2member_map_[value]
+        except:
+            err_msg = f"✗ Invalid name: dataset name must be one of {DsName.member_list()}."
+            raise ValueError(Fore.RED + err_msg + Style.RESET_ALL)
+
 
 @dataclass
 class ImageDataModule(pl.LightningDataModule):
@@ -67,8 +80,7 @@ class ImageDataModule(pl.LightningDataModule):
             self.test_ds = ImageFolder(root_dir / "test", transform=self.test_T)
 
         else:
-            member_list = ', '.join([ds.name for ds in DsName])
-            err_msg = f"✗ Invalid name: dataset name must be one of {member_list}."
+            err_msg = f"✗ Invalid name: dataset name must be one of {DsName.member_list()}."
             raise ValueError(Fore.RED + err_msg + Style.RESET_ALL)
 
     def train_dataloader(self):

@@ -8,7 +8,7 @@ from torchvision import transforms as T
 
 def get_args():
     parser = ArgumentParser()
-    parser.add_argument( "-r", "--root_dir", type=str, default="/home/pyshen/DataCenter/ImageNet10/train", help="The path to the root directory of the dataset", )
+    parser.add_argument( "-r", "--root_dir", type=str, default="../data/ImageNet10/train", help="The path to the root directory of the dataset", )
     parser.add_argument( "-s", "--size", type=int, default=224, help="The size of the image" )
     parser.add_argument( "-n", "--num_sample", type=int, default=100, help="The number of samples to read from the dataset", )
     return parser.parse_args()

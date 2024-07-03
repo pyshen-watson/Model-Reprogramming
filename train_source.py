@@ -8,7 +8,7 @@ from model import Backbone, SourceModule
 from dataset import DsName, ImageDataModule
 
 
-def get_args():
+def parse_args():
     parser = ArgumentParser()
     parser.add_argument( "-R", "--random_seed", type=int, default=42, help="The random seed for all dependencies (default: 42)", )
 
@@ -34,8 +34,7 @@ def get_args():
 
     return parser.parse_args()
 
-
-def get_dataModule(args):
+def create_dataModule(args):
     return ImageDataModule(
         name=DsName.IMAGENET10,
         root_dir=args.root_dir,
@@ -44,8 +43,7 @@ def get_dataModule(args):
         batch_size=args.batch_size,
     )
 
-
-def get_model(args, log_dir, n_class=10):
+def create_model(args, log_dir, n_class=10):
 
     # Create the backbone
     level = args.level
@@ -62,8 +60,7 @@ def get_model(args, log_dir, n_class=10):
 
     return model.set_source_model(backbone)
 
-
-def get_trainer(args):
+def create_trainer(args):
 
     return pl.Trainer(
         accelerator="gpu",
@@ -81,15 +78,15 @@ def get_trainer(args):
 if __name__ == "__main__":
 
     # Get args and set random seed for every dependencies
-    args = get_args()
+    args = parse_args()
     pl.seed_everything(args.random_seed, workers=True)
 
     # Prepare the dataloader
-    dm = get_dataModule(args)
+    dm = create_dataModule(args)
     train_loader = dm.train_dataloader()
     val_loader = dm.val_dataloader()
 
     # Train the source model
-    trainer = get_trainer(args)
-    model = get_model(args, trainer.logger.log_dir)
+    trainer = create_trainer(args)
+    model = create_model(args, trainer.logger.log_dir)
     trainer.fit(model, train_loader, val_loader)
