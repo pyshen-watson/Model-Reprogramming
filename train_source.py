@@ -48,7 +48,7 @@ def create_model(args, log_dir, n_class=10):
     # Create the backbone
     level = args.level
     assert level >= 1 and level <= 3, "The level is recommended between 1~3"
-    num_blocks = [level] * args.pooling # 
+    num_blocks = [level] * args.pooling
     backbone = Backbone(n_class, num_blocks).set_name(args.exp_name)
 
     # Create the lightning module and set the backbone

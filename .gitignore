@@ -1,8 +1,9 @@
-.legacy
+.exp_records/
 dataset/data
 lightning_logs/
+
 *.pyc
+*.sh
 *.pt
 *.ipynb
 *.npy
-script.sh
