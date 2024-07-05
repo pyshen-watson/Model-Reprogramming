@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn.init import kaiming_normal_, normal_
 from typing import NoReturn
 from colorama import Fore, Style
-
+from collections.abc import Iterable
 
 class Base(nn.Module):
 
@@ -39,6 +39,23 @@ class Base(nn.Module):
             print(f"{Fore.RED}✗ Fail to save weight to {path}: {e}.{Style.RESET_ALL}")
             raise ValueError()
 
+    def freeze(self):
+        for param in self.parameters():
+            param.requires_grad = False
+        return self
+
+    def _initialize_weights(self, net):
+
+        if not isinstance(net, Iterable):
+            net = [net]
+        
+        for layer in net:
+            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
+                kaiming_normal_(layer.weight, mode="fan_out", nonlinearity="relu")
+                if layer.bias is not None:
+                    normal_(layer.bias, 0, 0.1**0.5)
+            elif isinstance(layer, nn.Parameter):
+                kaiming_normal_(layer.data, mode="fan_out", nonlinearity="relu")
 
 class BasicBlock(nn.Module):
     """
@@ -64,13 +81,13 @@ class BasicBlock(nn.Module):
     def forward(self, x: torch.Tensor):
         return self.backbone(x)
 
-
 class Backbone(Base):
 
-    def __init__(self, n_class=10, num_blocks=[2, 2, 2]):
+    def __init__(self, n_class=10, level=1, pooling=3):
         super(Backbone, self).__init__()
 
         # Convolutional layers
+        num_blocks = self._get_num_blocks(level, pooling)
         blocks = self._create_convs(3, 64, num_blocks)
         out_size = blocks[-1].out_ch
 
@@ -81,10 +98,14 @@ class Backbone(Base):
 
         # Build the net and initialize it
         self.net = nn.Sequential(*blocks)
-        self._initialize_weights()
+        self._initialize_weights(self.net)
 
     def forward(self, x):
         return self.net(x)
+
+    def _get_num_blocks(self, level:int, pooling:int):
+        assert level >= 1 and level <= 3, "The level is recommended between 1~3"
+        return [level] * pooling
 
     def _create_convs(self, in_ch, out_ch, num_blocks):
 
@@ -93,15 +114,6 @@ class Backbone(Base):
         for num_conv in num_blocks:
             blocks.append(BasicBlock(in_ch, out_ch, num_conv))
             in_ch = out_ch
-            out_ch = min(
-                out_ch * 2, 512
-            )  # According to the paper of VGG, number of channel should not exceed 512
+            out_ch = min(out_ch * 2, 512)  # According to the paper of VGG, number of channel should not exceed 512
 
         return blocks
-
-    def _initialize_weights(self):
-        for layer in self.net:
-            if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.Linear):
-                kaiming_normal_(layer.weight, mode="fan_out", nonlinearity="relu")
-                if layer.bias is not None:
-                    normal_(layer.bias, 0, 0.1**0.5)

@@ -2,82 +2,53 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from .backbone import Base
+from typing import Dict
 from pathlib import Path
+from dataclasses import dataclass
+from .backbone import Base
+from .rpgLayer import ReprogrammingLayer
 
-
-class ReprogrammingLayer(Base):
-    def __init__(self, inner_size=24, src_size=32, visual_prompt=True, fc_layer=True):
-        
-        super(ReprogrammingLayer, self).__init__()
-        self.inner_size = inner_size
-        self.src_size = src_size
-        self.VP = visual_prompt
-        self.FC = fc_layer
-        
-        if visual_prompt:
-            # Calculate the padding dimensions
-            pad_h = (src_size - inner_size) // 2
-            pad_w = (src_size - inner_size) // 2
-
-            # Initialize the padding with trainable parameters
-            self.pad_t = nn.Parameter(torch.randn(3, pad_h, src_size))
-            self.pad_b = nn.Parameter(torch.randn(3, pad_h, src_size))
-            self.pad_l = nn.Parameter(torch.randn(3, inner_size, pad_w))
-            self.pad_r = nn.Parameter(torch.randn(3, inner_size, pad_w))
-
-        if fc_layer:
-            # One layer of DNN
-            self.fc = nn.Linear(3 * src_size * src_size, 3 * src_size * src_size)
-
-    def forward(self, x: torch.Tensor):
-        
-        if not self.VP and not self.FC:
-            x = F.interpolate(x, size=self.src_size, mode="bilinear", align_corners=False)
-            return x
-        
-        
-        if self.VP:
-            # Resize the input image to inner size
-            x = F.interpolate(x, size=self.inner_size, mode="bilinear", align_corners=False)
-            # Add the padding
-            batch_size = x.size(0)
-            pad_t = self.pad_t.repeat(batch_size, 1, 1, 1)
-            pad_b = self.pad_b.repeat(batch_size, 1, 1, 1)
-            pad_l = self.pad_l.repeat(batch_size, 1, 1, 1)
-            pad_r = self.pad_r.repeat(batch_size, 1, 1, 1)
-            x = torch.cat([pad_l, x, pad_r], dim=3)
-            x = torch.cat([pad_t, x, pad_b], dim=2)
-        
-        if self.FC:
-            # Resize the image
-            x = F.interpolate(x, size=self.src_size, mode="bilinear", align_corners=False)
-            # Pass a DNN layer
-            x = x.flatten(1)
-            x = self.fc(x)
-            x = x.reshape(-1, 3, self.src_size, self.src_size)
-        
-        return x
-    
+@dataclass(eq=False) # This avoid lightning trainer try to hash the module
 class ReprogrammingModule(pl.LightningModule, Base):
-    
-    def __init__(self, source_model, inner_size=24, src_size=32, lr=1e-3, visual_prompt=True, fc_layer=True):
+
+    # About Trainer
+    log_dir: Path
+    hp: Dict = None
+
+    #About Optimzer
+    lr: float = 1e-3
+    wd: float = 1e-3
+
+    # About model
+    source_size: int = 224
+    target_size: int = 32
+    inner_size: int = 156
+    fc: bool = False
+    vp: bool = False
+
+    def __post_init__(self):
         super(ReprogrammingModule, self).__init__()
-        self.rpm_layer = ReprogrammingLayer(inner_size, src_size, visual_prompt, fc_layer)
-        self.source_model: nn.Module = source_model
-        self.lr = lr
-        
-        # Freeze the source model
-        for param in self.source_model.parameters():
-            param.requires_grad = False
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.save_hyperparameters("hp")
+        self.rpg_layer = ReprogrammingLayer(
+            self.source_size,
+            self.target_size,
+            self.inner_size,
+            self.fc, self.vp)
+
+    def set_source_model(self, source_model: Base):
+        self.source_model = source_model.freeze()
+        with open(self.log_dir / 'model_structure.txt', 'w') as f:
+            f.write(str(source_model))
+        return self
 
     def forward(self, x: torch.Tensor):
-        x = self.rpm_layer(x)
+        x = self.rpg_layer(x)
         x = self.source_model(x)
         return x
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.lr)
+        return torch.optim.Adam(self.rpg_layer.parameters(), lr=self.lr, weight_decay=self.wd)
 
     def calc_loss(self, img, label, split: str):
 
@@ -101,7 +72,5 @@ class ReprogrammingModule(pl.LightningModule, Base):
         return self.calc_loss(batch[0], batch[1], "test")
 
     def on_save_checkpoint(self, checkpoint):
-        ckpt_key = [k for k in checkpoint['callbacks'].keys() if 'ModelCheckpoint' in k ][0]
-        ckpt_dir = checkpoint['callbacks'][ckpt_key]["dirpath"]
-        best_path = Path(ckpt_dir).parent / f"rpm_{self.source_model.name}.pt"
-        self.rpm_layer.save(best_path)
+        save_path = self.log_dir /  f"{self.name}.pt"
+        self.rpg_layer.save(save_path)

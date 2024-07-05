@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from .backbone import Base
 
 @dataclass(eq=False) # This avoid lightning trainer try to hash the module
-class SourceModule(pl.LightningModule):
+class SourceModule(pl.LightningModule, Base):
 
     log_dir: Path
     hp: Dict = None
@@ -54,5 +54,5 @@ class SourceModule(pl.LightningModule):
         return self.calc_loss(batch[0], batch[1], "test")
 
     def on_save_checkpoint(self, checkpoint):
-        save_path = self.log_dir /  f"{self.source_model.name}.pt"
+        save_path = self.log_dir /  f"{self.name}.pt"
         self.source_model.save(save_path)
