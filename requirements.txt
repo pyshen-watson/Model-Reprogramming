@@ -5,3 +5,4 @@ pytorch-lightning==2.2.4
 torch==2.0.1
 torchvision==0.15.2
 tensorboard==2.16.2
+torchinfo==1.8.0

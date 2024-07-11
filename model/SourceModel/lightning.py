@@ -5,32 +5,42 @@ import pytorch_lightning as pl
 from typing import Dict
 from pathlib import Path
 from dataclasses import dataclass
-from .backbone import Base
+from .vgg import Base
 
-@dataclass(eq=False) # This avoid lightning trainer try to hash the module
-class SourceModule(pl.LightningModule, Base):
 
+@dataclass(eq=False)  # This avoid lightning trainer try to hash the module
+class SourceWrapper(pl.LightningModule):
+
+    name: str
     log_dir: Path
     hp: Dict = None
     lr: float = 1e-3
     wd: float = 1e-3
 
     def __post_init__(self):
-        super(SourceModule, self).__init__()
+        super(SourceWrapper, self).__init__()
         self.save_hyperparameters("hp")
 
-    def set_source_model(self, backbone):
-        self.source_model: Base = backbone
+    def set_source_model(self, backbone: Base):
+        """
+        This function will set the backbone model to the lightning module.
+        and save the model structure to the log directory.
+        """
+        self.source_model = backbone
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        with open(self.log_dir / 'model_structure.txt', 'w') as f:
-            f.write(str(backbone))
+
+        with open(self.log_dir / "model_structure.txt", "w") as f:
+            print(backbone.summary((1, 3, 224, 224)), file=f)
+
         return self
 
     def forward(self, x: torch.Tensor):
         return self.source_model(x)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.source_model.parameters(), lr=self.lr, weight_decay=self.wd)
+        return torch.optim.Adam(
+            self.source_model.parameters(), lr=self.lr, weight_decay=self.wd
+        )
 
     def calc_loss(self, img, label, split: str):
 
@@ -54,5 +64,5 @@ class SourceModule(pl.LightningModule, Base):
         return self.calc_loss(batch[0], batch[1], "test")
 
     def on_save_checkpoint(self, checkpoint):
-        save_path = self.log_dir /  f"{self.name}.pt"
+        save_path = self.log_dir / f"{self.name}.pt"
         self.source_model.save(save_path)
