@@ -6,5 +6,6 @@ lightning_logs/
 *.sh
 *.pt
 *.ipynb
+*.csv
 *.npy
 test.py

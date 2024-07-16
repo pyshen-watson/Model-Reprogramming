@@ -1,8 +1,8 @@
-from typing import List
 import torch
 import torch.nn as nn
-from ..common.base import Base
+from typing import List
 from dataclasses import dataclass
+from ..common.base import Base
 
 @dataclass(eq=False) # This avoid lightning trainer try to hash the module
 class BasicBlock(Base):
@@ -13,7 +13,6 @@ class BasicBlock(Base):
     in_channel: int
     out_channel: int
     num_conv: int
-    pooling: bool = True
 
     def __post_init__(self):
         super(BasicBlock, self).__init__()
@@ -23,13 +22,12 @@ class BasicBlock(Base):
         layers = []
 
         for _ in range(self.num_conv):
-            layers.append(nn.Conv2d(in_ch, out_ch, kernel_size=3, padding="same"))
+            layers.append(nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1))
             layers.append(nn.ReLU())
             in_ch = out_ch
 
         # We use average pooling here because it's hard to compute the kernel of max pooling
-        if self.pooling:
-            layers.append(nn.AvgPool2d(kernel_size=2, stride=2))
+        layers.append(nn.AvgPool2d(kernel_size=2, stride=2))
         self.net = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor):
@@ -47,8 +45,8 @@ class VGG(Base):
         super(VGG, self).__init__()
 
         # Convolutional layers
-        block_config = self.get_block_config() # Ex. [2,2,2] in default setting
-        blocks = self.create_convs(3, 64, block_config)
+        block_config = [self.level] * self.pooling # Ex. [2,2,2] in default setting
+        blocks = self.create_convs(3, 32, block_config)
         out_size = blocks[-1].out_channel
 
         # Fully connected layers
@@ -63,17 +61,13 @@ class VGG(Base):
     def forward(self, x):
         return self.net(x)
 
-    def get_block_config(self):
-        assert self.level >= 1 and self.level <= 3, "The level is recommended between 1~3"
-        return [self.level] * self.pooling
-
     def create_convs(self, in_ch, out_ch, block_config) -> List[BasicBlock]:
 
         blocks = []
 
         for num_conv in block_config:
             
-            blocks.append(BasicBlock(in_ch, out_ch, num_conv, pooling=True))
+            blocks.append(BasicBlock(in_ch, out_ch, num_conv))
             in_ch = out_ch
             
             # According to the paper of VGG, number of channel should not exceed 512

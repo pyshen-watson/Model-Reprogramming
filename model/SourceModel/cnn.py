@@ -21,8 +21,9 @@ class CNN(Base):
 
         # Convolutional layers
         for _ in range(self.n_layer):
-            layers.append(nn.Conv2d(in_ch, out_ch, 3, padding="same"))
+            layers.append(nn.Conv2d(in_ch, out_ch, 3, padding=1))
             layers.append(nn.ReLU())
+            layers.append(nn.AdaptiveAvgPool2d(2, 2))
             in_ch = out_ch
         
         # Linear layers

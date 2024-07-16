@@ -16,7 +16,7 @@ def parse_args():
 
     # For data
     parser.add_argument("--root_dir", type=str, default="../data/ImageNet10", help="The path to the dataset (default: ../data/ImageNet10)")
-    parser.add_argument("--src_size", type=int, default=224, help="The input size of source dataset (default: 224)")
+    parser.add_argument("--src_size", type=int, default=112, help="The input size of source dataset (default: 112)")
     parser.add_argument("--num_workers", type=int, default=12, help="Number of workers for data loading (default: 12)") 
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training (default: 128)") 
 

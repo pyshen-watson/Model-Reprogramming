@@ -30,7 +30,8 @@ class SourceWrapper(pl.LightningModule):
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         with open(self.log_dir / "model_structure.txt", "w") as f:
-            print(backbone.summary((1, 3, 224, 224)), file=f)
+            input_size = (1, 3, self.hp['src_size'], self.hp['src_size'])
+            print(backbone.summary(input_size), file=f)
 
         return self
 
