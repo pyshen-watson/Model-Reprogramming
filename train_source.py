@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathlib import Path
 from argparse import ArgumentParser
-from model import SourceWrapper, CNN, VGG
+from model import SourceWrapper, VGG
 from dataset import DsName, ImageDataModule
 
 torch.set_float32_matmul_precision('high')
@@ -24,8 +24,7 @@ def parse_args():
     parser.add_argument( "-M", "--model", type=str, choices=["CNN", "VGG"], help="The type of model (required)", ) 
     parser.add_argument( "-L", "--level", type=int, default=1, help="The number of conv layers per block (default: 1)", ) 
     parser.add_argument( "-P", "--pooling", type=int, default=3, help="The number of pooling, i.e. the number of blocks (default: 3)", ) 
-    parser.add_argument( "-W", "--conv_width", type=int, default=128, help="The number of channel of convolutional layer (default: 128)", ) 
-    parser.add_argument( "-S", "--std_weight", type=float, default=2.0**0.5, help="The standard deviation of initialization (default: √2)", ) 
+    parser.add_argument( "-W", "--conv_width", type=int, default=32, help="The number of channel of convolutional layer (default: 32)", ) 
 
     # For optimizer
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="Learning rate (default: 1e-3)" ) 
@@ -48,19 +47,15 @@ def create_dataModule(args):
     )
 
 def create_model(args, n_class=10):
+
+    input_size = (1, 3, args.src_size, args.src_size)
     
-    if args.model == "CNN":
-        return CNN(n_class=n_class, 
-                   n_layer=args.level, 
-                   input_size=args.src_size, 
-                   conv_width=args.conv_width,
-                   init_std=args.std_weight)
-    
-    elif args.model == "VGG":
-        return VGG(n_class=n_class,
-                   level=args.level,
+    if args.model == "VGG":
+        return VGG(input_size=input_size,
+                   n_class=n_class,
                    pooling=args.pooling,
-                   init_std=args.std_weight)
+                   level=args.level,
+                   width_base=args.conv_width)
     else:
         raise ValueError(f"Unknown model: {args.model}")
     
