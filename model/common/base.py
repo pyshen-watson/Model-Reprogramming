@@ -2,14 +2,18 @@ import torch
 import torch.nn as nn
 from torch.nn.init import normal_
 from torchinfo import summary
+from typing import Iterable, Tuple
 from .log import log_success, log_fail
+
 
 class Base(nn.Module):
 
-    def __init__(self):
+    def __init__(self, input_size: Tuple[int]=None):
         super(Base, self).__init__()
-        self.net: nn.Sequential = None
-    
+        self.input_size = input_size
+        self.W_std = 2.0**0.5
+        self.b_std = 0.1**0.5
+
     def forward(self, x: torch.Tensor):
         raise NotImplementedError("Forward method is not implemented in Base model")
 
@@ -39,28 +43,23 @@ class Base(nn.Module):
         except:
             log_fail("Fail to freeze the gradient of the model.")
 
-    def summary(self, input_size):
+    def summary(self):
 
-        if self.net is None:
-            log_fail("The model is not initialized.")
-            
         try:
-            model_summary = summary(self.net, 
-                                    input_size=input_size, # NCHW 
-                                    verbose=0, 
-                                    depth=100)
-
+            model_summary = summary(self, self.input_size, verbose=0, depth=100)
             log_success("Export the model structure.")
             return model_summary
 
         except:
             log_fail("Fail to export the model structure. Please check the input size again, it should content the batch size.")
 
-    def init_weights(self, std_w=2.0**0.5, std_b=0.1**0.5):
+    def init_weights(self, net):
 
-        for layer in self.net:
+        net = [net] if not isinstance(net, Iterable) else net
 
-            width = None # this value is a flag
+        for layer in net:
+
+            width = None  # this value is a flag
 
             # The width of convolutional layer is in_channels * kernel_size^2
             if isinstance(layer, nn.Conv2d):
@@ -72,6 +71,31 @@ class Base(nn.Module):
                 width = layer.weight.shape[1]
             
             if width is not None:
-                normal_(layer.weight, 0, std_w / (width**0.5))
+                normal_(layer.weight, 0, self.W_std / (width**0.5))
                 if layer.bias is not None:
-                    normal_(layer.bias, 0, std_b)
+                    normal_(layer.bias, 0, self.b_std)
+
+    @staticmethod
+    def Conv(in_ch, out_ch, kernel_size=3):
+        return nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size, padding='same')
+    
+    @staticmethod
+    def Linear(in_feat, out_feat):
+        return nn.Linear(in_feat, out_feat)
+    
+    @staticmethod
+    def Act_fn():
+        return nn.ReLU()
+    
+    @staticmethod
+    def AvgPooling():
+        return nn.AvgPool2d(kernel_size=2, stride=2)
+        
+    @staticmethod
+    def GlobalAvgPooling():
+        return nn.AdaptiveAvgPool2d((1,1))
+    
+    @staticmethod
+    def Flatten():
+        return nn.Flatten()
+    

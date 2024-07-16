@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
-from typing import List
 from dataclasses import dataclass
 from ..common.base import Base
 
 @dataclass(eq=False) # This avoid lightning trainer try to hash the module
-class BasicBlock(Base):
+class VGGBlock(Base):
     """
     This block will create a module looks like: (CR)xn+P
     C is for Conv2d, R is for ReLU, n is num_conv and P is Average Pooling
@@ -15,64 +14,54 @@ class BasicBlock(Base):
     num_conv: int
 
     def __post_init__(self):
-        super(BasicBlock, self).__init__()
+        super(VGGBlock, self).__init__()
 
         in_ch = self.in_channel
         out_ch = self.out_channel
         layers = []
 
         for _ in range(self.num_conv):
-            layers.append(nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1))
-            layers.append(nn.ReLU())
+            layers += [Base.Conv(in_ch, out_ch), Base.Act_fn()]
             in_ch = out_ch
 
         # We use average pooling here because it's hard to compute the kernel of max pooling
-        layers.append(nn.AvgPool2d(kernel_size=2, stride=2))
+        layers += [Base.AvgPooling()]
         self.net = nn.Sequential(*layers)
+        self.init_weights(self.net)
 
     def forward(self, x: torch.Tensor):
         return self.net(x)
 
-@dataclass(eq=False) # This avoid lightning trainer try to hash the module
+
+@dataclass(eq=False)  # This avoid lightning trainer try to hash the module
 class VGG(Base):
 
+    input_size: tuple  # (N, C, H, W)
     n_class: int = 10
-    level: int = 2 # The number of conv layers per block
-    pooling: int = 3 # The number of pooling, i.e. the number of blocks
-    init_std: float = 2 ** 0.5
+    pooling: int = 3  # The number of pooling, i.e. the number of blocks
+    level: int = 2  # The number of conv layers per block
+    width_base: int = 32  # The number of filter of the first convolutional layer
 
     def __post_init__(self):
-        super(VGG, self).__init__()
+        super(VGG, self).__init__(self.input_size)
 
-        # Convolutional layers
-        block_config = [self.level] * self.pooling # Ex. [2,2,2] in default setting
-        blocks = self.create_convs(3, 32, block_config)
-        out_size = blocks[-1].out_channel
+        layers = []
+        in_ch = 3
+        out_ch = self.width_base
+
+        # Convolutional backbone
+        for _ in range(self.pooling):
+            layers.append(VGGBlock(in_ch, out_ch, self.level))
+            in_ch = out_ch
+            out_ch = min(out_ch * 2, 512) # The paper of VGG suggests that number of channel should not exceed 512
 
         # Fully connected layers
-        blocks.append(nn.AdaptiveAvgPool2d((1, 1)))
-        blocks.append(nn.Flatten())
-        blocks.append(nn.Linear(out_size, self.n_class))
+        out_ch = layers[-1].out_channel # Update to the real number of output channel
+        layers += [Base.GlobalAvgPooling(), Base.Flatten(), Base.Linear(out_ch , self.n_class)]
 
         # Build the net and initialize it
-        self.net = nn.Sequential(*blocks)
-        self.init_weights(self.init_std)
+        self.net = nn.Sequential(*layers)
+        self.init_weights(self.net)
 
     def forward(self, x):
         return self.net(x)
-
-    def create_convs(self, in_ch, out_ch, block_config) -> List[BasicBlock]:
-
-        blocks = []
-
-        for num_conv in block_config:
-            
-            blocks.append(BasicBlock(in_ch, out_ch, num_conv))
-            in_ch = out_ch
-            
-            # According to the paper of VGG, number of channel should not exceed 512
-            out_ch = min(out_ch * 2, 512)  
-
-        return blocks
-
-
