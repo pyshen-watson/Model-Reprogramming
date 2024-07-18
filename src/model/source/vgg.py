@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from dataclasses import dataclass
-from ..common.base import Base
+from ..base import Base
 
 @dataclass(eq=False) # This avoid lightning trainer try to hash the module
 class VGGBlock(Base):

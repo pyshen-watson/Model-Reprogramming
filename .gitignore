@@ -1,4 +1,4 @@
-.exp_records/
+.record/
 dataset/data
 lightning_logs/
 
@@ -8,4 +8,6 @@ lightning_logs/
 *.ipynb
 *.csv
 *.npy
+*.txt
 test.py
+export_record.py

@@ -2,11 +2,11 @@ import pytorch_lightning as pl
 from enum import Enum
 from pathlib import Path
 from functools import partial
-from colorama import Fore, Style
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from torchvision.datasets import CIFAR10, SVHN, STL10, ImageFolder
 from dataclasses import dataclass
+from ..common import log_fail
 
 
 class DsName(Enum):
@@ -26,7 +26,7 @@ class DsName(Enum):
             return DsName._value2member_map_[value]
         except:
             err_msg = f"✗ Invalid name: dataset name must be one of {DsName.member_list()}."
-            raise ValueError(Fore.RED + err_msg + Style.RESET_ALL)
+            log_fail(err_msg)
 
 
 @dataclass
@@ -81,7 +81,7 @@ class ImageDataModule(pl.LightningDataModule):
 
         else:
             err_msg = f"✗ Invalid name: dataset name must be one of {DsName.member_list()}."
-            raise ValueError(Fore.RED + err_msg + Style.RESET_ALL)
+            log_fail(err_msg)
 
     def train_dataloader(self):
         return self.create_loader(self.train_ds, shuffle=True)

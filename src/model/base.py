@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.nn.init import normal_
 from torchinfo import summary
 from typing import Iterable, Tuple
-from .log import log_success, log_fail
+from ..common import log_success, log_fail
 
 
 class Base(nn.Module):
