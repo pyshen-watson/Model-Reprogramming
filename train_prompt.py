@@ -20,7 +20,6 @@ def parse_args():
 
     # For transformation layer
     basic_parser.add_argument( "-V", "--visual_prompt", action="store_true", help="Use visual prompt", )
-    basic_parser.add_argument( "-R", "--resize_target", action="store_true", help="Resize the target to the same size as source", )
     # basic_parser.add_argument( "-F", "--fc_layer", action="store_true", help="Use fully connected layer (default: False)", )
     return basic_parser.parse_args()
 
@@ -81,7 +80,6 @@ def create_wrapper(args, exp_name, log_dir, model):
         source_size=args.src_size,
         target_size=args.tgt_size,
         vp=args.visual_prompt,
-        rz=args.resize_target,
         # fc=args.fc_layer
     )
 
@@ -97,7 +95,6 @@ if __name__ == "__main__":
     pl.seed_everything(args.random_seed, workers=True)
     exp_name = f"{args.model}-{args.level}x{args.pooling}(source)"  # Ex. VGG-3x2(source)
     exp_name += "_VP" if args.visual_prompt else ""
-    exp_name += "_RZ" if args.resize_target else ""
     # exp_name += "_FC" if args.fc_layer else ""
 
 

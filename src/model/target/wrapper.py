@@ -24,7 +24,6 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
     source_size: int = 112
     target_size: int = 32
     vp: bool = False
-    rz: bool = False
     fc: bool = False
 
     def __post_init__(self):
@@ -36,7 +35,6 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
             self.source_size, 
             self.target_size, 
             prompt=self.vp, 
-            resize=self.rz
         )
 
     def set_source_model(self, model: Base):
