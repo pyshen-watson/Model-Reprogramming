@@ -15,12 +15,12 @@ def parse_args():
 
     # For data and weight
     basic_parser.add_argument( "--target_ds", type=str, default="cifar10", choices=["cifar10", "stl10", "svhn", "imagenet10"], help="The name of target dataset, it can be cifar10, stl10 or svhn (default: cifar10)", )
-    basic_parser.add_argument( "--tgt_size", type=int, default=32, help="The size of target data (default: 32)", )
+    basic_parser.add_argument( "--tgt_size", type=int, default=64, help="The size of target data (default: 32)", )
     basic_parser.add_argument( "--weight_path", type=str, help="Path to the source model weight file (required)", )
 
     # For transformation layer
+    basic_parser.add_argument( "-F", "--fc_layer", action="store_true", help="Use fully connected layer (default: False)", )
     basic_parser.add_argument( "-V", "--visual_prompt", action="store_true", help="Use visual prompt", )
-    # basic_parser.add_argument( "-F", "--fc_layer", action="store_true", help="Use fully connected layer (default: False)", )
     return basic_parser.parse_args()
 
 
@@ -28,7 +28,7 @@ def create_dataModule(args):
     return ImageDataModule(
         name=DsName.value_to_member(args.target_ds),
         root_dir=args.data_dir,
-        size=args.tgt_size,  # Default:32
+        size=args.tgt_size,  # Default:64
         num_workers=args.num_workers,  # Default:12
         batch_size=args.batch_size,  # Default:128
     )
@@ -37,7 +37,7 @@ def create_dataModule(args):
 def create_trainer(args, exp_name):
 
     # Ex. epoch=2-step=294-val_loss=92.7337-val_acc=0.4800.ckpt
-    ckpt_name = "{epoch}-{step}-{val_loss:.4f}-{val_acc:.4f}"  # Ex. epoch=2-step=294-val_loss=92.7337-val_acc=0.4800.ckpt
+    ckpt_name = "{epoch}-{step}-{val_loss:.4f}-{val_acc:.4f}"  
 
     return pl.Trainer(
         accelerator="gpu",

@@ -7,11 +7,11 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from .prompt import VisualPromptLayer
-from ..base import Base
+from ..base import BaseModule
 
 
 @dataclass(eq=False)  # This avoid lightning trainer try to hash the module
-class ReprogrammingWrapper(pl.LightningModule, Base):
+class ReprogrammingWrapper(pl.LightningModule, BaseModule):
 
     # About Trainer
     name: str
@@ -37,7 +37,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
             prompt=self.vp, 
         )
 
-    def set_source_model(self, model: Base):
+    def set_source_model(self, model: BaseModule):
         """
         This function will set the backbone model to the lightning module.
         and save the model structure to the log directory.

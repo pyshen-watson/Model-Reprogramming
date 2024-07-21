@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathlib import Path
 from src.common import basic_parser
-from src.model import SourceWrapper, VGG
+from src.model import SourceWrapper, CNN, VGG, Resnet
 from src.dataset import DsName, ImageDataModule
 
 torch.set_float32_matmul_precision("high")
@@ -52,6 +52,14 @@ def create_model(args, n_class=10):
             level=args.level,
             width_base=args.conv_width,
         )
+    elif args.model == "ResNet":
+        return Resnet(
+            input_size=input_size,
+            n_class=n_class,
+            pooling=args.pooling,
+            level=args.level,
+            width_base=args.conv_width,
+        )
     else:
         raise ValueError(f"Unknown model: {args.model}")
 
@@ -60,7 +68,7 @@ def create_wrapper(args, exp_name, log_dir, model):
 
     wrapper = SourceWrapper(
         name=exp_name,
-        log_dir=Path(log_dir),  # Ex. lightning_logs/SRC_CNN3/version_0
+        log_dir=Path(log_dir),  # Ex. lightning_logs/VGG-2x2/version_0
         hp=vars(args),  # The hyperparameters for logging
         lr=args.learning_rate,
         wd=args.weight_decay,
@@ -76,7 +84,7 @@ if __name__ == "__main__":
     # Get args and set random seed for every dependencies
     args = basic_parser.parse_args()
     pl.seed_everything(args.random_seed, workers=True)
-    exp_name = f"{args.model}-{args.level}x{args.pooling}(source)"  # Ex. VGG-3x2(source)
+    exp_name = f"{args.model}-{args.level}x{args.pooling}"  # Ex. VGG-3x2
 
     # Prepare the dataloader
     dm = create_dataModule(args)
@@ -84,7 +92,9 @@ if __name__ == "__main__":
     val_loader = dm.val_dataloader()
 
     # Train the source model
+    weight_path = f"weights/{exp_name.replace('source', 'new')}.pt"
     trainer = create_trainer(args, exp_name)
-    model = create_model(args)
+    model = create_model(args).load(weight_path)
     wrapper = create_wrapper(args, exp_name, trainer.logger.log_dir, model)
-    trainer.fit(wrapper, train_loader, val_loader)
+    trainer.test(wrapper, val_loader)
+    # trainer.fit(wrapper, train_loader, val_loader)

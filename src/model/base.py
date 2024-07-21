@@ -2,17 +2,56 @@ import torch
 import torch.nn as nn
 from torch.nn.init import normal_
 from torchinfo import summary
-from typing import Iterable, Tuple
 from ..common import log_success, log_fail
 
 
-class Base(nn.Module):
+class Base:
 
-    def __init__(self, input_size: Tuple[int]=None):
-        super(Base, self).__init__()
-        self.input_size = input_size
-        self.W_std = 2.0**0.5
-        self.b_std = 0.1**0.5
+    @staticmethod
+    def Conv(in_ch, out_ch, ksize=3, stride=1, W_std=2.0**0.5, b_std=0.1**0.5):
+
+        padding = (ksize - 1) // 2  # Same size padding
+        conv = nn.Conv2d(in_ch, out_ch, ksize, stride, padding)
+
+        # Initialize the weight and bias following NTK papers
+        width = in_ch * ksize**2
+        normal_(conv.weight, 0, W_std / (width**0.5))
+        normal_(conv.bias, 0, b_std)
+
+        return conv
+
+    @staticmethod
+    def Linear(in_feat, out_feat, W_std=2.0**0.5, b_std=0.1**0.5):
+
+        linear = nn.Linear(in_feat, out_feat)
+
+        # Initialize the weight and bias following NTK papers
+        normal_(linear.weight, 0, W_std / (in_feat**0.5))
+        normal_(linear.bias, 0, b_std)
+        return linear
+
+    @staticmethod
+    def Act_fn():
+        return nn.ReLU()
+
+    @staticmethod
+    def AvgPooling(kernel_size=2, stride=2):
+        return nn.AvgPool2d(kernel_size, stride)
+
+    @staticmethod
+    def GlobalAvgPooling():
+        return nn.AdaptiveAvgPool2d((1, 1))
+
+    @staticmethod
+    def Flatten():
+        return nn.Flatten()
+
+
+class BaseModule(nn.Module):
+
+    def __init__(self):
+        super(BaseModule, self).__init__()
+        self.input_size = (1, 3, 112, 112)
 
     def forward(self, x: torch.Tensor):
         raise NotImplementedError("Forward method is not implemented in Base model")
@@ -46,56 +85,9 @@ class Base(nn.Module):
     def summary(self):
 
         try:
-            model_summary = summary(self, self.input_size, verbose=0, depth=100)
+            model_summary = summary(self, self.input_size, depth=100)
             log_success("Export the model structure.")
             return model_summary
 
         except:
-            log_fail("Fail to export the model structure. Please check the input size again, it should content the batch size.")
-
-    def init_weights(self, net):
-
-        net = [net] if not isinstance(net, Iterable) else net
-
-        for layer in net:
-
-            width = None  # this value is a flag
-
-            # The width of convolutional layer is in_channels * kernel_size^2
-            if isinstance(layer, nn.Conv2d):
-                shape = layer.weight.shape
-                width = shape[1] * shape[2] * shape[3]
-            
-            # The width of linear layer is the number of input features
-            elif isinstance(layer, nn.Linear):
-                width = layer.weight.shape[1]
-            
-            if width is not None:
-                normal_(layer.weight, 0, self.W_std / (width**0.5))
-                if layer.bias is not None:
-                    normal_(layer.bias, 0, self.b_std)
-
-    @staticmethod
-    def Conv(in_ch, out_ch, kernel_size=3):
-        return nn.Conv2d(in_ch, out_ch, kernel_size=kernel_size, padding='same')
-    
-    @staticmethod
-    def Linear(in_feat, out_feat):
-        return nn.Linear(in_feat, out_feat)
-    
-    @staticmethod
-    def Act_fn():
-        return nn.ReLU()
-    
-    @staticmethod
-    def AvgPooling():
-        return nn.AvgPool2d(kernel_size=2, stride=2)
-        
-    @staticmethod
-    def GlobalAvgPooling():
-        return nn.AdaptiveAvgPool2d((1,1))
-    
-    @staticmethod
-    def Flatten():
-        return nn.Flatten()
-    
+            log_fail("Fail to export the model structure.")

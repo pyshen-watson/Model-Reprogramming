@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from typing import Dict
 from pathlib import Path
 from dataclasses import dataclass
-from ..base import Base
+from ..base import BaseModule
 
 
 @dataclass(eq=False)  # This avoid lightning trainer try to hash the module
@@ -21,7 +21,7 @@ class SourceWrapper(pl.LightningModule):
         super(SourceWrapper, self).__init__()
         self.save_hyperparameters("hp")
 
-    def set_source_model(self, model: Base):
+    def set_source_model(self, model: BaseModule):
         """
         This function will set the backbone model to the lightning module.
         and save the model structure to the log directory.
