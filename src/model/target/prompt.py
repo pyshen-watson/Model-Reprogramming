@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dataclasses import dataclass
-from ..base import BaseModule
+from ..base import Base
 
 @dataclass(eq=False)
-class ImagePaddingLayer(BaseModule):
+class ImagePaddingLayer(Base):
 
     source_size: int = 112
     target_size: int = 32
@@ -23,7 +23,7 @@ class ImagePaddingLayer(BaseModule):
     
 
 @dataclass(eq=False)
-class VisualPromptLayer(BaseModule):
+class VisualPromptLayer(Base):
 
     source_size: int = 112
     target_size: int = 32

@@ -44,21 +44,31 @@ def create_model(args, n_class=10):
 
     input_size = (1, 3, args.src_size, args.src_size)
 
-    if args.model == "VGG":
+    if args.model == "CNN":
         return VGG(
             input_size=input_size,
-            n_class=n_class,
-            pooling=args.pooling,
+            width=args.conv_width,
             level=args.level,
-            width_base=args.conv_width,
+            group=1,
+            n_class=n_class,
         )
+
+    elif args.model == "VGG":
+        return VGG(
+            input_size=input_size,
+            width=args.conv_width,
+            level=args.level,
+            group=args.group,
+            n_class=n_class,
+        )
+    
     elif args.model == "ResNet":
         return Resnet(
             input_size=input_size,
-            n_class=n_class,
-            pooling=args.pooling,
+            width=args.conv_width,
             level=args.level,
-            width_base=args.conv_width,
+            group=args.group,
+            n_class=n_class,
         )
     else:
         raise ValueError(f"Unknown model: {args.model}")
@@ -84,7 +94,7 @@ if __name__ == "__main__":
     # Get args and set random seed for every dependencies
     args = basic_parser.parse_args()
     pl.seed_everything(args.random_seed, workers=True)
-    exp_name = f"{args.model}-{args.level}x{args.pooling}"  # Ex. VGG-3x2
+    exp_name = f"{args.model}-{args.level}x{args.group}"  # Ex. VGG-3x2
 
     # Prepare the dataloader
     dm = create_dataModule(args)
@@ -92,9 +102,7 @@ if __name__ == "__main__":
     val_loader = dm.val_dataloader()
 
     # Train the source model
-    weight_path = f"weights/{exp_name.replace('source', 'new')}.pt"
     trainer = create_trainer(args, exp_name)
-    model = create_model(args).load(weight_path)
+    model = create_model(args)
     wrapper = create_wrapper(args, exp_name, trainer.logger.log_dir, model)
-    trainer.test(wrapper, val_loader)
-    # trainer.fit(wrapper, train_loader, val_loader)
+    trainer.fit(wrapper, train_loader, val_loader)

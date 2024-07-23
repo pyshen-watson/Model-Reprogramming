@@ -1,95 +1,80 @@
-import torch
 import torch.nn as nn
 from dataclasses import dataclass
-from ..base import BaseModule
+from ..base import Base, BaseModule
 
-
-@dataclass(eq=False)  # This avoid lightning trainer try to hash the module
 class ResnetBlock(BaseModule):
 
-    in_channel: int
-    out_channel: int
-
-    def __post_init__(self):
+    def __init__(self, in_ch, out_ch):
         super(ResnetBlock, self).__init__()
 
-        # aliases
-        in_ch = self.in_channel
-        out_ch = self.out_channel
-
         self.main_path = nn.Sequential(
-            BaseModule.Conv(in_ch, out_ch),
-            BaseModule.Act_fn(),
-            BaseModule.Conv(out_ch, out_ch),
-            BaseModule.Act_fn(),
+            Base.Act_fn(),
+            Base.Conv(in_ch, out_ch),
+            Base.Act_fn(),
+            Base.Conv(out_ch, out_ch),
         )
-        self.init_weights(self.main_path)
 
         # Adjust the number of channels if it is mismatch
-        self.shortcut_path = nn.Sequential()
-        if in_ch != out_ch:
-            self.shortcut_path = BaseModule.Conv(in_ch, out_ch, ksize=1)
-            self.init_weights(self.shortcut_path)
+        self.shortcut = Base.Identity() if in_ch == out_ch else Base.Conv(in_ch, out_ch, ksize=1)
 
     def forward(self, x):
-        return self.main_path(x) + self.shortcut_path(x)
+        return self.main_path(x) + self.shortcut(x)
 
 
-@dataclass(eq=False)  # This avoid lightning trainer try to hash the module
 class ResnetGroup(BaseModule):
-
-    n_blocks: int
-    in_channel: int
-    out_channel: int
-
-    def __post_init__(self):
+    def __init__(self, in_ch, out_ch, n_blocks):
         super(ResnetGroup, self).__init__()
 
-        # aliases
-        in_ch = self.in_channel
-        out_ch = self.out_channel
-        print(f"ResnetGroup: {in_ch} -> {out_ch}")
-
+        # The first block inputs the input channel
         layers = [ResnetBlock(in_ch, out_ch)]
-        for _ in range(self.n_blocks - 1):
-            layers.append(ResnetBlock(out_ch, out_ch))
-        layers.append(BaseModule.AvgPooling())
 
-        self.net = nn.Sequential(*layers)
-        self.init_weights(self.net)
+        # The rests inputs the output channel
+        for _ in range(n_blocks - 1):
+            layers.append(ResnetBlock(out_ch, out_ch))
+
+        layers.append(Base.AvgPooling())
+        self.layers = nn.ModuleList(layers)
 
     def forward(self, x):
-        return self.net(x)
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 
 @dataclass(eq=False)  # This avoid lightning trainer try to hash the module
 class Resnet(BaseModule):
 
-    input_size: tuple  # (N, C, H, W)
+    input_size: tuple = (1, 3, 112, 112)
+    width: int = 32  # The number of filter of the first conv layer
+    level: int = 1  # The number of conv layers per group
+    group: int = 1 # The number of groups
     n_class: int = 10
-    pooling: int = 3  # The number of pooling, i.e. the number of blocks
-    level: int = 3  # The number of conv layers per block
-    width_base: int = 32  # The number of filter of the first convolutional layer
 
     def __post_init__(self):
         super(Resnet, self).__init__()
 
-        in_ch = 3
-        out_ch = self.width_base
-        layers = [ BaseModule.Conv(in_ch, out_ch, ksize=7, stride=2), 
-                  BaseModule.Act_fn(), 
-                  BaseModule.AvgPooling(kernel_size=3) ]
-        in_ch = out_ch
+        layers = [
+            Base.Conv(3, self.width, ksize=7, stride=2),
+            Base.AvgPooling(kernel_size=3),
+        ]
 
-        for _ in range(self.pooling):
-            layers += [ ResnetGroup(self.level, in_ch, out_ch) ]
+        in_ch = self.width
+        out_ch = self.width * 2
+
+        for _ in range(self.group):
+            layers += [ResnetGroup(in_ch, out_ch, self.level)]
             in_ch = out_ch
             out_ch *= 2
-        
-        layers += [ BaseModule.GlobalAvgPooling(), BaseModule.Flatten(), BaseModule.Linear(in_ch, self.n_class), ]
 
-        self.net = nn.Sequential(*layers)
-        self.init_weights(self.net)
+        layers += [
+            Base.GlobalAvgPooling(),
+            Base.Flatten(),
+            Base.Linear(in_ch, self.n_class),
+        ]
+
+        self.layers = nn.ModuleList(layers)
 
     def forward(self, x):
-        return self.net(x)
+        for layer in self.layers:
+            x = layer(x)
+        return x

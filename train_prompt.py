@@ -61,9 +61,9 @@ def create_model(args, n_class=10):
         return VGG(
             input_size=input_size,
             n_class=n_class,
-            pooling=args.pooling,
+            group=args.pooling,
             level=args.level,
-            width_base=args.conv_width,
+            width=args.conv_width,
         ).load(args.weight_path)
     else:
         raise ValueError(f"Unknown model: {args.model}")

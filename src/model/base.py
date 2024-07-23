@@ -45,6 +45,10 @@ class Base:
     @staticmethod
     def Flatten():
         return nn.Flatten()
+    
+    @staticmethod
+    def Identity():
+        return nn.Identity()
 
 
 class BaseModule(nn.Module):
