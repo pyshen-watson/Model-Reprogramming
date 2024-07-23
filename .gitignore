@@ -1,4 +1,6 @@
 .record/
+.vscode/
+
 dataset/data
 lightning_logs/
 
@@ -9,5 +11,6 @@ lightning_logs/
 *.csv
 *.npy
 *.txt
+
 test.py
 export_record.py
