@@ -14,7 +14,6 @@ torch.set_float32_matmul_precision("high")
 def parse_args():
 
     # For data and weight
-    basic_parser.add_argument( "--target_ds", type=str, default="cifar10", choices=["cifar10", "stl10", "svhn", "imagenet10"], help="The name of target dataset, it can be cifar10, stl10 or svhn (default: cifar10)", )
     basic_parser.add_argument( "--tgt_size", type=int, default=64, help="The size of target data (default: 32)", )
     basic_parser.add_argument( "--weight_path", type=str, help="Path to the source model weight file (required)", )
 
@@ -26,7 +25,7 @@ def parse_args():
 
 def create_dataModule(args):
     return ImageDataModule(
-        name=DsName.value_to_member(args.target_ds),
+        name=DsName.value_to_member(args.dataset),
         root_dir=args.data_dir,
         size=args.tgt_size,  # Default:64
         num_workers=args.num_workers,  # Default:12

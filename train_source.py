@@ -13,7 +13,7 @@ torch.set_float32_matmul_precision("high")
 
 def create_dataModule(args):
     return ImageDataModule(
-        name=DsName.IMAGENET10,
+        name=DsName.value_to_member(args.dataset),
         root_dir=args.data_dir,
         size=args.src_size,  # Default:112
         num_workers=args.num_workers,  # Default:12
@@ -28,6 +28,7 @@ def create_trainer(args, exp_name):
 
     return pl.Trainer(
         accelerator="gpu",
+        devices=[args.gpu_id],
         benchmark=True,
         max_steps=args.max_steps,
         fast_dev_run=args.dry_run,
@@ -94,7 +95,11 @@ if __name__ == "__main__":
     # Get args and set random seed for every dependencies
     args = basic_parser.parse_args()
     pl.seed_everything(args.random_seed, workers=True)
-    exp_name = f"{args.model}-{args.level}x{args.group}"  # Ex. VGG-3x2
+
+    if args.model in ["CNN", "DNN"]:
+        exp_name = f"{args.model}-{args.level}" # Ex. CNN-3
+    else:
+        exp_name = f"{args.model}-{args.level}x{args.group}" # Ex. VGG-3x2
 
     # Prepare the dataloader
     dm = create_dataModule(args)
