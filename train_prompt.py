@@ -95,6 +95,7 @@ def create_wrapper(args, exp_name, log_dir, model):
         hp=vars(args),
         lr=args.learning_rate,
         wd=args.weight_decay,
+        loss_fn=args.loss_fn, # CE or MSE
         source_size=args.src_size,
         target_size=args.tgt_size,
         vp=args.visual_prompt,

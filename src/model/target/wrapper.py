@@ -19,6 +19,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
     hp: Dict = None
     lr: float = 1e-3
     wd: float = 1e-3
+    loss_fn: str = "CE"
 
     # About model
     source_size: int = 112
@@ -66,15 +67,21 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
     def calc_loss(self, img, label, split: str):
 
         logits = self(img)
-        loss = F.cross_entropy(logits, label)
-        pred = logits.argmax(1)
-        acc = (pred == label).float().mean()
+
+        if self.loss_fn == "CE":
+           loss = F.cross_entropy(logits, label)
+
+        elif self.loss_fn == "MSE":
+            label_OH = F.one_hot(label, self.source_model.n_class).float()
+            loss = F.mse_loss(logits, label_OH)
+
+        acc = (logits.argmax(1) == label).float().mean()
 
         # Logging
         self.log(f"{split}_loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{split}_acc", acc, prog_bar=True, sync_dist=True)
 
-        return {"loss": loss, "acc": acc, "pred": pred, "logits": logits}
+        return {"loss": loss, "acc": acc}
 
     def training_step(self, batch, batch_idx):
         return self.calc_loss(batch[0], batch[1], "train")
