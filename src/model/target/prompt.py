@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from dataclasses import dataclass
-from ..base import Base
+from ..base import BaseModule
 
 @dataclass(eq=False)
-class ImagePaddingLayer(Base):
+class ImagePaddingLayer(BaseModule):
 
     source_size: int = 112
-    target_size: int = 32
+    target_size: int = 64
 
     def __post_init__(self):
         super(ImagePaddingLayer, self).__init__()
@@ -23,15 +23,16 @@ class ImagePaddingLayer(Base):
     
 
 @dataclass(eq=False)
-class VisualPromptLayer(Base):
+class VisualPromptLayer(BaseModule):
 
     source_size: int = 112
-    target_size: int = 32
+    target_size: int = 64
     prompt: bool = True
 
     def __post_init__(self):
         super(VisualPromptLayer, self).__init__()
         assert self.target_size <= self.source_size, "Target size must be less than or equal to source size"
+        self.input_size = (1, 3, self.target_size, self.target_size)
 
         self.padding_layer = ImagePaddingLayer(self.source_size, self.target_size)
         mask = self.padding_layer.mask

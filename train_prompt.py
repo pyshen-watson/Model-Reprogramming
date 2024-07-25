@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathlib import Path
 from src.common import basic_parser
-from src.model import VGG, ReprogrammingWrapper
+from src.model import VGG, Resnet, ReprogrammingWrapper
 from src.dataset import DsName, ImageDataModule
 
 torch.set_float32_matmul_precision("high")
@@ -14,7 +14,7 @@ torch.set_float32_matmul_precision("high")
 def parse_args():
 
     # For data and weight
-    basic_parser.add_argument( "--tgt_size", type=int, default=64, help="The size of target data (default: 32)", )
+    basic_parser.add_argument( "--tgt_size", type=int, default=64, help="The size of target data (default: 64)", )
     basic_parser.add_argument( "--weight_path", type=str, help="Path to the source model weight file (required)", )
 
     # For transformation layer
@@ -40,6 +40,7 @@ def create_trainer(args, exp_name):
 
     return pl.Trainer(
         accelerator="gpu",
+        devices=[args.gpu_id],
         benchmark=True,
         max_steps=args.max_steps,
         fast_dev_run=args.dry_run,
@@ -56,13 +57,31 @@ def create_model(args, n_class=10):
 
     input_size = (1, 3, args.src_size, args.src_size)
 
-    if args.model == "VGG":
+    if args.model == "CNN":
         return VGG(
             input_size=input_size,
-            n_class=n_class,
-            group=args.pooling,
-            level=args.level,
             width=args.conv_width,
+            level=args.level,
+            group=1,
+            n_class=n_class,
+        ).load(args.weight_path)
+
+    elif args.model == "VGG":
+        return VGG(
+            input_size=input_size,
+            width=args.conv_width,
+            level=args.level,
+            group=args.group,
+            n_class=n_class,
+        ).load(args.weight_path)
+    
+    elif args.model == "ResNet":
+        return Resnet(
+            input_size=input_size,
+            width=args.conv_width,
+            level=args.level,
+            group=args.group,
+            n_class=n_class,
         ).load(args.weight_path)
     else:
         raise ValueError(f"Unknown model: {args.model}")
@@ -92,7 +111,11 @@ if __name__ == "__main__":
     # Get args and set random seed for every dependencies
     args = parse_args()
     pl.seed_everything(args.random_seed, workers=True)
-    exp_name = f"{args.model}-{args.level}x{args.pooling}(source)"  # Ex. VGG-3x2(source)
+
+    if args.model in ["CNN", "DNN"]:
+        exp_name = f"{args.model}-{args.level}" # Ex. CNN-3
+    else:
+        exp_name = f"{args.model}-{args.level}x{args.group}" # Ex. VGG-3x2
     exp_name += "_VP" if args.visual_prompt else ""
     # exp_name += "_FC" if args.fc_layer else ""
 
@@ -106,6 +129,7 @@ if __name__ == "__main__":
     trainer = create_trainer(args, exp_name)
     model = create_model(args)
     wrapper = create_wrapper(args, exp_name, trainer.logger.log_dir, model)
+
 
     if args.visual_prompt:  # or args.fc_layer:
         trainer.fit(wrapper, train_loader, val_loader)

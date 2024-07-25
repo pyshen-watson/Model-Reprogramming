@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathlib import Path
 from src.common import basic_parser
-from src.model import SourceWrapper, CNN, VGG, Resnet
+from src.model import SourceWrapper, VGG, Resnet
 from src.dataset import DsName, ImageDataModule
 
 torch.set_float32_matmul_precision("high")
@@ -83,6 +83,7 @@ def create_wrapper(args, exp_name, log_dir, model):
         hp=vars(args),  # The hyperparameters for logging
         lr=args.learning_rate,
         wd=args.weight_decay,
+        loss_fn=args.loss_fn # CE or MSE
     )
 
     # Set the source model in the last because dataclass assigns

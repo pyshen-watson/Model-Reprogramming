@@ -16,6 +16,7 @@ class SourceWrapper(pl.LightningModule):
     hp: Dict = None
     lr: float = 1e-3
     wd: float = 1e-3
+    loss_fn: str = "CE"
 
     def __post_init__(self):
         super(SourceWrapper, self).__init__()
@@ -46,7 +47,14 @@ class SourceWrapper(pl.LightningModule):
 
         # Calucate the metrics
         logits = self(img)
-        loss = F.cross_entropy(logits, label)
+
+        if self.loss_fn == "CE":
+           loss = F.cross_entropy(logits, label)
+
+        elif self.loss_fn == "MSE":
+            label_OH = F.one_hot(label, self.source_model.n_class).float()
+            loss = F.mse_loss(logits, label_OH)
+
         acc = (logits.argmax(1) == label).float().mean()
 
         # Logging

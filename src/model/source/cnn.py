@@ -22,27 +22,3 @@ class CNNGroup(BaseModule):
             x = layer(x)
         return x
 
-@dataclass(eq=False)  # This avoid lightning trainer try to hash the module
-class CNN(BaseModule):
-
-    input_size: tuple = (1, 3, 112, 112)
-    width: int = 32  # The number of filter of the first convolutional layer
-    level: int = 1  # The number of conv
-    n_class: int = 10
-
-    def __post_init__(self):
-        super(CNN, self).__init__()
-
-        layers = [
-            CNNGroup(3, self.width, self.level),
-            Base.GlobalAvgPooling(), 
-            Base.Flatten(), 
-            Base.Linear(self.width , self.n_class)
-        ]
-
-        self.layers = nn.ModuleList(layers) # Register the layers
-
-    def forward(self, x):     
-        for layer in self.layers:
-            x = layer(x)
-        return x

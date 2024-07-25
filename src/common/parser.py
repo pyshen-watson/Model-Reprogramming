@@ -20,6 +20,7 @@ basic_parser.add_argument( "-w", "--conv_width", type=int, default=32, help="The
 # For optimizer
 basic_parser.add_argument( "--learning_rate", type=float, default=1e-3, help="Learning rate (default: 1e-3)" ) 
 basic_parser.add_argument( "--weight_decay", type=float, default=1e-3, help="Weight decay (default: 1e-3)", ) 
+basic_parser.add_argument( "--loss_fn", type=str, default="CE", choices=["CE", "MSE"], help="The loss function is either cross entropy(CE) or mean square error (MSE) (default: CE)", ) 
 
 # For trainer
 basic_parser.add_argument( "-G", "--gpu_id", type=int, default=0, help="The id of the (default: 0)", )
