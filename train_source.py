@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathlib import Path
 from src.common import basic_parser
-from src.model import SourceWrapper, VGG, Resnet
+from src.model import SourceWrapper, DNN, VGG, Resnet
 from src.dataset import DsName, ImageDataModule
 
 torch.set_float32_matmul_precision("high")
@@ -45,7 +45,15 @@ def create_model(args, n_class=10):
 
     input_size = (1, 3, args.src_size, args.src_size)
 
-    if args.model == "CNN":
+    if args.model == "DNN":
+        return DNN(
+            input_size=input_size,
+            width=args.conv_width,
+            level=args.level,
+            n_class=n_class,
+        )
+
+    elif args.model == "CNN":
         return VGG(
             input_size=input_size,
             width=args.conv_width,

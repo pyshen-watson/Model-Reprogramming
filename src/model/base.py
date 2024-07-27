@@ -55,7 +55,6 @@ class BaseModule(nn.Module):
 
     def __init__(self):
         super(BaseModule, self).__init__()
-        self.input_size = (1, 3, 112, 112)
 
     def forward(self, x: torch.Tensor):
         raise NotImplementedError("Forward method is not implemented in Base model")

@@ -12,7 +12,7 @@ basic_parser.add_argument("--num_workers", type=int, default=12, help="Number of
 basic_parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training (default: 128)", ) 
 
 # For source model
-basic_parser.add_argument( "-m", "--model", type=str, choices=["CNN", "VGG", "ResNet"], help="The type of model (required)", ) 
+basic_parser.add_argument( "-m", "--model", type=str, choices=["DNN", "CNN", "VGG", "ResNet"], help="The type of model (required)", ) 
 basic_parser.add_argument( "-l", "--level", type=int, default=1, help="The number of conv layers per group (default: 1)", ) 
 basic_parser.add_argument( "-g", "--group", type=int, default=1, help="The number of groups. (default: 1)", ) 
 basic_parser.add_argument( "-w", "--conv_width", type=int, default=32, help="The number of channel of convolutional layer (default: 32)", ) 

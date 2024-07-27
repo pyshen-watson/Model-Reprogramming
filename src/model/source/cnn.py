@@ -1,6 +1,5 @@
 import torch.nn as nn
 from ..base import Base, BaseModule
-from dataclasses import dataclass
 
 class CNNGroup(BaseModule):
     """
