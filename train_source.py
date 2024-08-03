@@ -6,14 +6,14 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pathlib import Path
 from src.common import basic_parser
 from src.model import SourceWrapper, DNN, VGG, Resnet
-from src.dataset import DsName, ImageDataModule
+from src.dataset import ImageDataModule
 
 torch.set_float32_matmul_precision("high")
 
 
 def create_dataModule(args):
     return ImageDataModule(
-        name=DsName.value_to_member(args.dataset),
+        name=args.dataset,
         root_dir=args.data_dir,
         size=args.src_size,  # Default:112
         num_workers=args.num_workers,  # Default:12

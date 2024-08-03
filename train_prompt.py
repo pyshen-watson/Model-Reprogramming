@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pathlib import Path
 from src.common import basic_parser
 from src.model import DNN, VGG, Resnet, ReprogrammingWrapper
-from src.dataset import DsName, ImageDataModule
+from src.dataset import ImageDataModule
 
 torch.set_float32_matmul_precision("high")
 
@@ -25,11 +25,12 @@ def parse_args():
 
 def create_dataModule(args):
     return ImageDataModule(
-        name=DsName.value_to_member(args.dataset),
+        name=args.dataset,
         root_dir=args.data_dir,
         size=args.tgt_size,  # Default:64
         num_workers=args.num_workers,  # Default:12
         batch_size=args.batch_size,  # Default:128
+        normalize=False,
     )
 
 
