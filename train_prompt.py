@@ -1,11 +1,11 @@
 import torch
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from pathlib import Path
 from src.common import basic_parser
-from src.model import VGG, Resnet, ReprogrammingWrapper
+from src.model import DNN, VGG, Resnet, ReprogrammingWrapper
 from src.dataset import DsName, ImageDataModule
 
 torch.set_float32_matmul_precision("high")
@@ -18,8 +18,8 @@ def parse_args():
     basic_parser.add_argument( "--weight_path", type=str, help="Path to the source model weight file (required)", )
 
     # For transformation layer
-    basic_parser.add_argument( "-F", "--fc_layer", action="store_true", help="Use fully connected layer (default: False)", )
-    basic_parser.add_argument( "-V", "--visual_prompt", action="store_true", help="Use visual prompt", )
+    basic_parser.add_argument( "-V", "--vp", action="store_true", help="Use visual prompt", )
+    basic_parser.add_argument( "-F", "--fc", action="store_true", help="Use fully connected layer", )
     return basic_parser.parse_args()
 
 
@@ -36,7 +36,10 @@ def create_dataModule(args):
 def create_trainer(args, exp_name):
 
     # Ex. epoch=2-step=294-val_loss=92.7337-val_acc=0.4800.ckpt
-    ckpt_name = "{epoch}-{step}-{val_loss:.4f}-{val_acc:.4f}"  
+    ckpt_name = "{epoch}-{step}-{val_loss:.4f}-{val_acc:.4f}"
+
+    logger_fn = TensorBoardLogger if args.vp or args.fc else CSVLogger
+    logger = logger_fn("lightning_logs", name=exp_name)
 
     return pl.Trainer(
         accelerator="gpu",
@@ -44,7 +47,7 @@ def create_trainer(args, exp_name):
         benchmark=True,
         max_steps=args.max_steps,
         fast_dev_run=args.dry_run,
-        logger=TensorBoardLogger("lightning_logs", name=exp_name),
+        logger=logger,
         log_every_n_steps=20,
         callbacks=[
             ModelCheckpoint(monitor="val_loss", filename=ckpt_name, save_top_k=1, mode="min"),
@@ -57,7 +60,15 @@ def create_model(args, n_class=10):
 
     input_size = (1, 3, args.src_size, args.src_size)
 
-    if args.model == "CNN":
+    if args.model == "DNN":
+        return DNN(
+            input_size=input_size,
+            width=args.conv_width,
+            level=args.level,
+            n_class=n_class,
+        ).load(args.weight_path)
+
+    elif args.model == "CNN":
         return VGG(
             input_size=input_size,
             width=args.conv_width,
@@ -98,8 +109,9 @@ def create_wrapper(args, exp_name, log_dir, model):
         loss_fn=args.loss_fn, # CE or MSE
         source_size=args.src_size,
         target_size=args.tgt_size,
-        vp=args.visual_prompt,
-        # fc=args.fc_layer
+        vp=args.vp,
+        fc=args.fc,
+        device=args.gpu_id
     )
 
     # Set the source model in the last because dataclass assigns
@@ -117,8 +129,9 @@ if __name__ == "__main__":
         exp_name = f"{args.model}-{args.level}" # Ex. CNN-3
     else:
         exp_name = f"{args.model}-{args.level}x{args.group}" # Ex. VGG-3x2
-    exp_name += "_VP" if args.visual_prompt else ""
-    # exp_name += "_FC" if args.fc_layer else ""
+    exp_name += "_" if args.fc or args.vp else ""
+    exp_name += "FC" if args.fc else ""
+    exp_name += "VP" if args.vp else ""
 
 
     # Prepare the dataloader
@@ -132,7 +145,7 @@ if __name__ == "__main__":
     wrapper = create_wrapper(args, exp_name, trainer.logger.log_dir, model)
 
 
-    if args.visual_prompt:  # or args.fc_layer:
+    if args.vp or args.fc:
         trainer.fit(wrapper, train_loader, val_loader)
     else:  # Baseline
         trainer.test(wrapper, val_loader)

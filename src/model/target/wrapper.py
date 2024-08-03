@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from .prompt import VisualPromptLayer
-from ..base import Base
+from ..base import Base, BaseModule
 
 
 @dataclass(eq=False)  # This avoid lightning trainer try to hash the module
@@ -26,6 +26,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
     target_size: int = 32
     vp: bool = False
     fc: bool = False
+    device: int = 0
 
     def __post_init__(self):
         super(ReprogrammingWrapper, self).__init__()
@@ -35,10 +36,12 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         self.vp_layer = VisualPromptLayer(
             self.source_size, 
             self.target_size, 
-            prompt=self.vp, 
+            vp=self.vp,
+            fc=self.fc,
+            device=self.device
         )
 
-    def set_source_model(self, model: Base):
+    def set_source_model(self, model: BaseModule):
         """
         This function will set the backbone model to the lightning module.
         and save the model structure to the log directory.
@@ -80,6 +83,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         # Logging
         self.log(f"{split}_loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{split}_acc", acc, prog_bar=True, sync_dist=True)
+        self.log(f"{split}_Pnorm", self.vp_layer.norm[0], prog_bar=True, sync_dist=True)
 
         return {"loss": loss, "acc": acc}
 
@@ -95,3 +99,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
     def on_save_checkpoint(self, checkpoint):
         save_path = self.log_dir / f"{self.name}.pt"
         self.vp_layer.save(save_path)
+
+    def on_after_backward(self):
+        with open(self.log_dir / "grad.txt", "a") as f:
+            f.write(f"grad: {self.vp_layer.delta.grad.mean()}\n")
