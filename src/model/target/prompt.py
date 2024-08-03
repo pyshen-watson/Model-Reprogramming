@@ -38,25 +38,24 @@ class VisualPromptLayer(BaseModule):
         self.input_size = (1, 3, self.target_size, self.target_size) # For the profiler
 
         # ==================== The FC part ====================
-        # If vp in enable, fc keep the target data shape. 
-        # Otherwise, the output shape of fc will be the same as source data
-        fc_out_size = self.target_size if self.vp else self.source_size
+        # If vp in enable, fc keep the target data shape. Otherwise, the output shape of fc will be the same as source data
+        # fc_out_size = self.target_size if self.vp else self.source_size
         # self.fc_layer = FullyConnectedLayer(self.target_size, fc_out_size)
 
         # ==================== The VP part ====================
         pad = (self.source_size - self.target_size) // 2
-        self.mask = torch.ones(3, self.source_size, self.source_size, requires_grad=False).to(self.device)
-        self.mask[:, pad:pad+self.target_size, pad:pad+self.target_size] = 0
-        self.delta = nn.Parameter(torch.zeros_like(self.mask), requires_grad=True)
-        self.padding = partial(F.pad, pad=(pad, pad, pad, pad), value=0)
+        self.pad_fn = partial(F.pad, pad=(pad, pad, pad, pad))
 
-    @property
-    def norm(self):
-        return (F.sigmoid(self.delta) * self.mask).norm(1)
+        mask = torch.zeros((3, self.target_size, self.target_size))
+        mask = self.pad_fn(mask, value=1)
+        self.register_buffer("mask", mask)
+
+        self.delta = nn.Parameter(torch.zeros_like(self.mask), requires_grad=True)
+
 
     def forward(self, x: torch.Tensor):
         # x = self.fc_layer(x) if self.fc else x
-        x = self.padding(x)  if self.vp else x
+        x = self.pad_fn(x)  if self.vp else x
         x = x + F.sigmoid(self.delta) * self.mask if self.vp else x
         return x
     

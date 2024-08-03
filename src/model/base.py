@@ -76,14 +76,6 @@ class BaseModule(nn.Module):
         except Exception as e:
             log_fail(f"Fail to save weight to {path}: {e}.")
 
-    def freeze(self):
-        try:
-            for param in self.parameters():
-                param.requires_grad = False
-            log_success("Freezed the gradient of the model.")
-            return self
-        except:
-            log_fail("Fail to freeze the gradient of the model.")
 
     def summary(self):
 

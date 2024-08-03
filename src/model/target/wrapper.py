@@ -46,7 +46,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         This function will set the backbone model to the lightning module.
         and save the model structure to the log directory.
         """
-        self.source_model = model.freeze()
+        self.source_model = model.requires_grad_(False)
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         with open(self.log_dir / "model_structure.txt", "w") as f:
@@ -83,7 +83,6 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         # Logging
         self.log(f"{split}_loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{split}_acc", acc, prog_bar=True, sync_dist=True)
-        self.log(f"{split}_Pnorm", self.vp_layer.norm[0], prog_bar=True, sync_dist=True)
 
         return {"loss": loss, "acc": acc}
 
