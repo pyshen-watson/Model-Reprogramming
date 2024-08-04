@@ -24,6 +24,6 @@ basic_parser.add_argument( "--loss_fn", type=str, default="CE", choices=["CE", "
 
 # For trainer
 basic_parser.add_argument( "-G", "--gpu_id", type=int, default=0, help="The id of the (default: 0)", )
-basic_parser.add_argument( "-M", "--max_steps", type=int, default=10000, help="Maximum number of steps for training (default: 5000)", )
+basic_parser.add_argument( "-M", "--max_epoch", type=int, default=100, help="Maximum number of epoch for training (default: 100)", )
 basic_parser.add_argument( "-D", "--dry_run", action="store_true", help="Perform a dry run without training (default: False)", ) 
 basic_parser.add_argument( "-P", "--patience", type=int, default=5, help="The patience epochs for early stop. (default: 5)", )

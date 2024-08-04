@@ -39,8 +39,8 @@ class VisualPromptLayer(BaseModule):
 
         # ==================== The FC part ====================
         # If vp in enable, fc keep the target data shape. Otherwise, the output shape of fc will be the same as source data
-        # fc_out_size = self.target_size if self.vp else self.source_size
-        # self.fc_layer = FullyConnectedLayer(self.target_size, fc_out_size)
+        fc_out_size = self.target_size if self.vp else self.source_size
+        self.fc_layer = FullyConnectedLayer(self.target_size, fc_out_size)
 
         # ==================== The VP part ====================
         pad = (self.source_size - self.target_size) // 2
@@ -54,7 +54,7 @@ class VisualPromptLayer(BaseModule):
 
 
     def forward(self, x: torch.Tensor):
-        # x = self.fc_layer(x) if self.fc else x
+        x = self.fc_layer(x) if self.fc else x
         x = self.pad_fn(x)  if self.vp else x
         x = x + F.sigmoid(self.delta) * self.mask if self.vp else x
         return x

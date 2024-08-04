@@ -46,7 +46,7 @@ def create_trainer(args, exp_name):
         accelerator="gpu",
         devices=[args.gpu_id],
         benchmark=True,
-        max_steps=args.max_steps,
+        max_epochs=args.max_epoch,
         fast_dev_run=args.dry_run,
         logger=logger,
         log_every_n_steps=20,

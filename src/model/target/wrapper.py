@@ -32,6 +32,7 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         super(ReprogrammingWrapper, self).__init__()
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.save_hyperparameters("hp")
+        self.automatic_optimization = False
 
         self.vp_layer = VisualPromptLayer(
             self.source_size, 
@@ -63,9 +64,10 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         return x
 
     def configure_optimizers(self):
-        return torch.optim.Adam(
-            self.vp_layer.parameters(), lr=self.lr, weight_decay=self.wd
-        )
+        return [
+            torch.optim.Adam([self.vp_layer.delta], lr=self.lr*100, weight_decay=self.wd),
+            torch.optim.Adam(self.vp_layer.fc_layer.parameters(), lr=self.lr, weight_decay=self.wd),
+        ]
 
     def calc_loss(self, img, label, split: str):
 
@@ -79,6 +81,14 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
             loss = F.mse_loss(logits, label_OH)
 
         acc = (logits.argmax(1) == label).float().mean()
+
+        if split == "train":
+            opt1, opt2 = self.optimizers()
+            opt1.zero_grad()
+            opt2.zero_grad()
+            self.manual_backward(loss)
+            opt1.step()
+            opt2.step()
 
         # Logging
         self.log(f"{split}_loss", loss, prog_bar=True, sync_dist=True)
@@ -98,7 +108,3 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
     def on_save_checkpoint(self, checkpoint):
         save_path = self.log_dir / f"{self.name}.pt"
         self.vp_layer.save(save_path)
-
-    def on_after_backward(self):
-        with open(self.log_dir / "grad.txt", "a") as f:
-            f.write(f"grad: {self.vp_layer.delta.grad.mean()}\n")
