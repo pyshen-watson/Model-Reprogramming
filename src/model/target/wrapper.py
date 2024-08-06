@@ -64,10 +64,12 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
         return x
 
     def configure_optimizers(self):
-        return [
-            torch.optim.Adam([self.vp_layer.delta], lr=self.lr*100, weight_decay=self.wd),
-            torch.optim.Adam(self.vp_layer.fc_layer.parameters(), lr=self.lr, weight_decay=self.wd),
-        ]
+        optims = []
+        if self.vp:
+            optims += [torch.optim.Adam([self.vp_layer.delta], lr=self.lr*100, weight_decay=self.wd)]
+        if self.fc:
+            optims += [torch.optim.Adam(self.vp_layer.fc_layer.parameters(), lr=self.lr, weight_decay=self.wd)]
+        return optims
 
     def calc_loss(self, img, label, split: str):
 
@@ -82,19 +84,28 @@ class ReprogrammingWrapper(pl.LightningModule, Base):
 
         acc = (logits.argmax(1) == label).float().mean()
 
+        # Backward
         if split == "train":
-            opt1, opt2 = self.optimizers()
-            opt1.zero_grad()
-            opt2.zero_grad()
-            self.manual_backward(loss)
-            opt1.step()
-            opt2.step()
+            self.step(loss)
 
         # Logging
         self.log(f"{split}_loss", loss, prog_bar=True, sync_dist=True)
         self.log(f"{split}_acc", acc, prog_bar=True, sync_dist=True)
 
         return {"loss": loss, "acc": acc}
+    
+    def step(self, loss):
+        opts = self.optimizers()
+        opts = opts if isinstance(opts, list) else [opts]
+
+        for opt in opts:
+            opt.zero_grad()
+
+        self.manual_backward(loss)
+        
+        for opt in opts:
+            opt.step()
+
 
     def training_step(self, batch, batch_idx):
         return self.calc_loss(batch[0], batch[1], "train")
