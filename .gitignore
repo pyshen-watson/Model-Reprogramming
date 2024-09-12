@@ -5,7 +5,6 @@ dataset/data
 lightning_logs/
 
 *.pyc
-*.sh
 *.pt
 *.ipynb
 *.csv
