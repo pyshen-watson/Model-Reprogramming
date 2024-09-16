@@ -24,12 +24,12 @@ OPTIM_PARAMS="--loss_fn $LOSS_FN --learning_rate $LEARNING_RATE --weight_decay $
 
 for seed in $(seq 42 44);do
     for group in $(seq 1 1);do
-        for layer in $(seq 3 4);do
+        for layer in $(seq 5 5);do
             params="$DATASET_PARAMS $MODEL_PARAMS $OPTIM_PARAMS -l $layer -g $group"
-            gpu_id=$(((layer+group) % 2))
+            gpu_id=$(((group+layer)%2))
             python train_source.py $params -r $seed -G $gpu_id &
         done
-        wait
     done
+    wait
 done
 

@@ -52,10 +52,11 @@ class Resnet(BaseModule):
 
     def __post_init__(self):
         super(Resnet, self).__init__()
+        pool_ksize = 3 if self.input_size[-1] > 32 else 2
 
         layers = [
             Base.Conv(3, self.width, ksize=7, stride=2),
-            Base.AvgPooling(kernel_size=3),
+            Base.AvgPooling(kernel_size=pool_ksize),
         ]
 
         in_ch = self.width

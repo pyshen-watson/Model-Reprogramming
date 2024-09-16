@@ -109,6 +109,7 @@ if __name__ == "__main__":
         exp_name = f"{args.model}-{args.level}" # Ex. CNN-3
     else:
         exp_name = f"{args.model}-{args.level}x{args.group}" # Ex. VGG-3x2
+    exp_name += f"({args.loss_fn})"
 
     # Prepare the dataloader
     dm = create_dataModule(args)
