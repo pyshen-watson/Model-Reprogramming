@@ -40,7 +40,7 @@ class VisualPromptLayer(BaseModule):
         # ==================== The FC part ====================
         # If vp in enable, fc keep the target data shape. Otherwise, the output shape of fc will be the same as source data
         fc_out_size = self.target_size if self.vp else self.source_size
-        self.fc_layer = FullyConnectedLayer(self.source_size, fc_out_size) if self.fc else None
+        self.fc_layer = FullyConnectedLayer(self.target_size, fc_out_size) if self.fc else None
 
         # ==================== The VP part ====================
         pad = (self.source_size - self.target_size) // 2
